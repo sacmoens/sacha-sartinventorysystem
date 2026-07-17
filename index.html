@@ -71,10 +71,12 @@ header.site{
   width:36px;height:36px;border-radius:50%;
   border:1px solid var(--line);background:transparent;color:var(--ink-soft);
   transition:border-color .15s,color .15s;
+  position:relative;
 }
 .iconbtn:hover{border-color:var(--gold);color:var(--gold-deep);}
 .iconbtn.active{background:var(--gold);border-color:var(--gold);color:var(--paper);}
 .iconbtn svg{width:17px;height:17px;}
+.doc-count{position:absolute;top:-4px;right:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--gold);color:#fff;font-size:9.5px;line-height:15px;text-align:center;font-family:'Inter',sans-serif;font-weight:700;}
 
 .toolbar{
   max-width:1200px;margin:0 auto;
@@ -377,6 +379,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
     </div>
     <div class="admin-strip" id="adminStrip" style="display:none;">
       <button class="btn btn-plain" id="manageExposBtn">Collections</button>
+      <button class="btn btn-plain" id="backupBtn">Backup</button>
       <button class="btn btn-solid" id="addArtworkBtn">+ Add artwork</button>
     </div>
   </div>
@@ -1195,6 +1198,7 @@ function openExpoManager(){
         <button class="iconbtn" data-up="${x.id}" title="Move up" ${i===0?'disabled':''} style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 15l-6-6-6 6"/></svg></button>
         <button class="iconbtn" data-down="${x.id}" title="Move down" ${i===sorted.length-1?'disabled':''} style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9l6 6 6-6"/></svg></button>
         <button class="iconbtn" data-editexpo="${x.id}" title="Edit" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="iconbtn" data-docs="${x.id}" title="Documents" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>${(x.docs&&x.docs.length)?`<span class="doc-count">${x.docs.length}</span>`:''}</button>
         <button class="iconbtn" data-delexpo="${x.id}" title="Delete" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
       </div>`).join('');
 
@@ -1202,6 +1206,7 @@ function openExpoManager(){
     list.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>swapOrder(b.dataset.down,1));
     list.querySelectorAll('[data-delexpo]').forEach(b=>b.onclick=()=>delExpo(b.dataset.delexpo));
     list.querySelectorAll('[data-editexpo]').forEach(b=>b.onclick=()=>editExpo(b.dataset.editexpo));
+    list.querySelectorAll('[data-docs]').forEach(b=>b.onclick=()=>openDocsPanel(b.dataset.docs, renderList));
   }
   async function swapOrder(id, dir){
     const sorted = sortedExpos();
@@ -1221,8 +1226,12 @@ function openExpoManager(){
     renderList();
   }
   async function delExpo(id){
-    if(!confirm('Delete this collection? Artworks in it will keep their details but show no collection.')) return;
     const removed = state.expos.find(x=>x.id===id);
+    const docCount = (removed.docs||[]).length;
+    const warning = docCount
+      ? `Delete this collection? Artworks in it will keep their details but show no collection. This will also permanently delete ${docCount} attached document${docCount>1?'s':''}.`
+      : 'Delete this collection? Artworks in it will keep their details but show no collection.';
+    if(!confirm(warning)) return;
     const affected = state.artworks.filter(a=>a.expoId===id);
     state.expos = state.expos.filter(x=>x.id!==id);
     affected.forEach(a=>{ a.expoId=''; });
@@ -1235,6 +1244,8 @@ function openExpoManager(){
       renderList();
       return;
     }
+    const docKeys = await sList('sais:doc:'+id+':');
+    for(const k of docKeys){ await sDelete(k); }
     renderFilterOptions();
     renderList();
     render();
@@ -1276,7 +1287,241 @@ function openExpoManager(){
   renderList();
 }
 
-/* ---------------- price list ---------------- */
+/* ---------------- documents (per collection) ---------------- */
+function fmtBytes(n){
+  if(n < 1024) return n+' B';
+  if(n < 1024*1024) return (n/1024).toFixed(0)+' KB';
+  return (n/(1024*1024)).toFixed(1)+' MB';
+}
+function fmtDocDate(iso){
+  try{ return new Date(iso).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); }
+  catch(e){ return ''; }
+}
+const MAX_DOC_BYTES = 20 * 1024 * 1024; // 20MB soft cap per document
+
+function openDocsPanel(expoId, onChange){
+  const expo = expoById(expoId);
+  if(!expo) return;
+  if(!expo.docs) expo.docs = [];
+  const wrap = openOverlay(`
+    <div class="panel panel-form">
+      <div class="panel-head"><h2>Documents — ${esc(expo.name)}</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-bottom:16px;">Attach signed agreements or other files for this collection — a scanned PDF, a photo of a signed page, whatever you've got. These live on this device just like everything else, so keep the real signed original somewhere durable too (email, cloud drive); treat this as a handy copy, not the only copy.</p>
+        <div id="docList"></div>
+        <div class="divider-hex" style="margin:20px 0 16px;">${hexDivider().replace(/<div[^>]*>|<\/div>/g,'')}</div>
+        <input type="file" id="docFileInput" accept="application/pdf,.pdf,image/*" style="display:none;">
+        <button class="btn btn-solid" id="uploadDocBtn">+ Upload document</button>
+        <p class="err-text" id="docErr" style="display:none;"></p>
+      </div>
+      <div class="panel-foot"><button class="btn btn-plain" data-close>Close</button></div>
+    </div>`, {persistent:true});
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+
+  function renderDocs(){
+    const list = wrap.querySelector('#docList');
+    const docs = expo.docs||[];
+    if(!docs.length){ list.innerHTML = '<p class="hint">No documents attached yet.</p>'; return; }
+    list.innerHTML = docs.map(d=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.name)}</div>
+          <div class="hint" style="margin-top:0;">${fmtDocDate(d.uploadedAt)} · ${fmtBytes(d.size||0)}</div>
+        </div>
+        <button class="btn btn-plain" data-viewdoc="${d.id}" style="padding:6px 12px;font-size:12px;">View</button>
+        <button class="iconbtn" data-deldoc="${d.id}" title="Delete" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+      </div>`).join('');
+
+    list.querySelectorAll('[data-viewdoc]').forEach(b=>b.onclick=()=>viewDoc(b.dataset.viewdoc));
+    list.querySelectorAll('[data-deldoc]').forEach(b=>b.onclick=()=>deleteDoc(b.dataset.deldoc));
+  }
+
+  async function viewDoc(docId){
+    const dataUrl = await sGet('sais:doc:'+expoId+':'+docId);
+    if(!dataUrl){ toast('Could not load that document.'); return; }
+    const win = window.open();
+    if(win){ win.document.write(`<iframe src="${dataUrl}" style="border:0;position:fixed;inset:0;width:100%;height:100%;"></iframe>`); }
+    else { toast('Please allow pop-ups to view the document.'); }
+  }
+
+  async function deleteDoc(docId){
+    const d = expo.docs.find(x=>x.id===docId);
+    if(!d) return;
+    if(!confirm(`Delete "${d.name}"? This can't be undone.`)) return;
+    const prevDocs = expo.docs.slice();
+    expo.docs = expo.docs.filter(x=>x.id!==docId);
+    const ok = await saveExpos();
+    if(!ok){
+      expo.docs = prevDocs;
+      toast('Could not delete — try again.');
+      return;
+    }
+    await sDelete('sais:doc:'+expoId+':'+docId);
+    renderDocs();
+    if(typeof onChange==='function') onChange();
+  }
+
+  const fileInput = wrap.querySelector('#docFileInput');
+  const errEl = wrap.querySelector('#docErr');
+  const uploadBtn = wrap.querySelector('#uploadDocBtn');
+  uploadBtn.onclick = ()=>fileInput.click();
+  fileInput.addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    errEl.style.display='none';
+    if(file.size > MAX_DOC_BYTES){
+      errEl.textContent = `That file is ${fmtBytes(file.size)} — please keep documents under ${fmtBytes(MAX_DOC_BYTES)}.`;
+      errEl.style.display='block';
+      fileInput.value=''; return;
+    }
+    uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading…';
+    try{
+      const dataUrl = await new Promise((resolve, reject)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>resolve(reader.result);
+        reader.onerror = ()=>reject(new Error('file read failed'));
+        reader.readAsDataURL(file);
+      });
+      const docEntry = {id: uid('doc'), name: file.name, size: file.size, type: file.type, uploadedAt: new Date().toISOString()};
+      const fileOk = await sSet('sais:doc:'+expoId+':'+docEntry.id, dataUrl);
+      if(!fileOk){
+        errEl.textContent = 'Could not save that file — your device may be low on storage.';
+        errEl.style.display='block';
+      } else {
+        expo.docs.push(docEntry);
+        const metaOk = await saveExpos();
+        if(!metaOk){
+          await sDelete('sais:doc:'+expoId+':'+docEntry.id);
+          expo.docs = expo.docs.filter(x=>x.id!==docEntry.id);
+          errEl.textContent = 'Could not save — try again.';
+          errEl.style.display='block';
+        } else {
+          renderDocs();
+          if(typeof onChange==='function') onChange();
+        }
+      }
+    }catch(err){
+      console.error(err);
+      errEl.textContent = 'Could not read that file — try again.';
+      errEl.style.display='block';
+    }
+    uploadBtn.disabled = false; uploadBtn.textContent = '+ Upload document';
+    fileInput.value = '';
+  });
+
+  renderDocs();
+}
+
+/* ---------------- backup / restore ---------------- */
+async function clearAllStorage(){
+  await sDelete('sais:expos');
+  const artKeys = await sList('sais:artwork:');
+  for(const k of artKeys) await sDelete(k);
+  const photoKeys = await sList('sais:photo:');
+  for(const k of photoKeys) await sDelete(k);
+  const docKeys = await sList('sais:doc:');
+  for(const k of docKeys) await sDelete(k);
+}
+async function restoreBackup(data){
+  await clearAllStorage();
+  state.expos = Array.isArray(data.expos) ? data.expos : [];
+  await saveExpos();
+  const imported = Array.isArray(data.artworks) ? data.artworks : [];
+  const restored = [];
+  for(const a of imported){
+    const clean = {...a};
+    if(!clean.id) clean.id = uid('art');
+    const result = await saveArtwork(clean);
+    if(result.ok) restored.push(clean);
+  }
+  state.artworks = restored;
+  const docs = Array.isArray(data.docs) ? data.docs : [];
+  for(const d of docs){
+    if(d && d.key && d.value) await sSet(d.key, d.value);
+  }
+  renderFilterOptions();
+  render();
+}
+function openBackupPanel(){
+  const wrap = openOverlay(`
+    <div class="panel panel-form">
+      <div class="panel-head"><h2>Backup &amp; restore</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-bottom:16px;">Everything here — artworks, collections, and attached documents — lives only on this device. Export a backup file now and then, and keep it somewhere safe — an email to yourself, a cloud drive, wherever. If this device is ever lost or the app reinstalled, a backup file is the only way to get it all back.</p>
+        <p class="eyebrow" style="margin-bottom:10px;">Export</p>
+        <button class="btn btn-solid" id="exportBackupBtn">Download backup file</button>
+        <div class="divider-hex" style="margin:22px 0 18px;">${hexDivider().replace(/<div[^>]*>|<\/div>/g,'')}</div>
+        <p class="eyebrow" style="margin-bottom:10px;">Restore</p>
+        <p class="hint" style="margin-bottom:10px;">Restoring replaces everything currently in the app with the contents of the backup file — the current gallery on this device will be overwritten.</p>
+        <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none;">
+        <button class="btn btn-plain" id="restoreBackupBtn">Choose backup file…</button>
+        <p class="err-text" id="backupErr" style="display:none;"></p>
+      </div>
+      <div class="panel-foot"><button class="btn btn-plain" data-close>Close</button></div>
+    </div>`, {persistent:true});
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+
+  wrap.querySelector('#exportBackupBtn').onclick = async ()=>{
+    const btn = wrap.querySelector('#exportBackupBtn');
+    btn.disabled = true; btn.textContent = 'Preparing…';
+    const docKeys = await sList('sais:doc:');
+    const docs = [];
+    for(const key of docKeys){
+      const value = await sGet(key);
+      if(value) docs.push({key, value});
+    }
+    const payload = {
+      app: 'SAIS',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      expos: state.expos,
+      artworks: state.artworks,
+      docs
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    link.href = url; link.download = `sais-backup-${stamp}.json`;
+    document.body.appendChild(link); link.click(); link.remove();
+    URL.revokeObjectURL(url);
+    btn.disabled = false; btn.textContent = 'Download backup file';
+    toast('Backup downloaded');
+  };
+
+  const fileInput = wrap.querySelector('#restoreFileInput');
+  const errEl = wrap.querySelector('#backupErr');
+  wrap.querySelector('#restoreBackupBtn').onclick = ()=>fileInput.click();
+  fileInput.addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    errEl.style.display='none';
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!data || !Array.isArray(data.artworks) || !Array.isArray(data.expos)){
+        errEl.textContent = "That doesn't look like a SAIS backup file.";
+        errEl.style.display='block';
+        fileInput.value=''; return;
+      }
+      const count = data.artworks.length;
+      const docCount = Array.isArray(data.docs) ? data.docs.length : 0;
+      const proceed = confirm(`Restore this backup? It will replace everything currently in the app (${state.artworks.length} artworks) with the backup's ${count} artworks${docCount?` and ${docCount} document${docCount>1?'s':''}`:''}. This can't be undone.`);
+      if(!proceed){ fileInput.value=''; return; }
+      const btn = wrap.querySelector('#restoreBackupBtn');
+      btn.disabled = true; btn.textContent = 'Restoring…';
+      await restoreBackup(data);
+      btn.disabled = false; btn.textContent = 'Choose backup file…';
+      toast('Backup restored');
+      closeOverlay(wrap);
+    }catch(err){
+      console.error(err);
+      errEl.textContent = "Could not read that file — make sure it's an unedited SAIS backup .json file.";
+      errEl.style.display='block';
+    }
+    fileInput.value = '';
+  });
+}
 function openPriceList(){
   const wrap = openOverlay(`
     <div class="panel panel-wide">
@@ -1363,6 +1608,7 @@ $('#filterSearch').addEventListener('input', e=>{
 $('#swipeBtn').addEventListener('click', openSwipeView);
 $('#adminBtn').addEventListener('click', handleAdminClick);
 $('#manageExposBtn').addEventListener('click', openExpoManager);
+$('#backupBtn').addEventListener('click', openBackupPanel);
 $('#addArtworkBtn').addEventListener('click', ()=>openArtworkForm());
 $('#priceListBtn').addEventListener('click', openPriceList);
 
