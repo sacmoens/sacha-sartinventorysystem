@@ -379,6 +379,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
     </div>
     <div class="admin-strip" id="adminStrip" style="display:none;">
       <button class="btn btn-plain" id="manageExposBtn">Collections</button>
+      <button class="btn btn-plain" id="manageArtistsBtn">Artists</button>
       <button class="btn btn-plain" id="backupBtn">Backup</button>
       <button class="btn btn-solid" id="addArtworkBtn">+ Add artwork</button>
     </div>
@@ -407,6 +408,7 @@ const STATUS = {
 const state = {
   artworks: [],
   expos: [],
+  artists: [],
   filter: {expo:'all', status:'all', q:''},
   swipe: {expoId:'all', index:0},
   isAdmin: false,
@@ -507,6 +509,13 @@ async function loadExpos(){
 async function saveExpos(){
   return await sSet('sais:expos', JSON.stringify(state.expos), true);
 }
+async function loadArtists(){
+  const v = await sGet('sais:artists', true);
+  return v ? JSON.parse(v) : [];
+}
+async function saveArtists(){
+  return await sSet('sais:artists', JSON.stringify(state.artists), true);
+}
 async function loadArtworks(){
   const keys = await sList('sais:artwork:', true);
   const metas = (await Promise.all(keys.map(k=>sGet(k, true))))
@@ -597,9 +606,10 @@ function compressImage(file, maxDim, quality){
 async function init(){
   render();
   try{
-    const [expos, artworks] = await Promise.all([loadExpos(), loadArtworks()]);
+    const [expos, artworks, artists] = await Promise.all([loadExpos(), loadArtworks(), loadArtists()]);
     state.expos = expos;
     state.artworks = artworks;
+    state.artists = artists;
     state.loading = false;
   }catch(e){
     state.loading = false;
@@ -612,10 +622,14 @@ async function init(){
 function sortedExpos(){
   return [...state.expos].sort((a,b)=>(a.order||0)-(b.order||0) || a.name.localeCompare(b.name));
 }
+function sortedArtists(){
+  return [...state.artists].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+}
 function sortedArtworksFor(list){
   return [...list].sort((a,b)=>(a.order||0)-(b.order||0) || (a.title||'').localeCompare(b.title||''));
 }
 function expoById(id){ return state.expos.find(x=>x.id===id); }
+function artistById(id){ return state.artists.find(x=>x.id===id); }
 
 function renderFilterOptions(){
   const sel = $('#filterExpo');
@@ -990,7 +1004,7 @@ function wireCardDrag(el){
 function openArtworkForm(id){
   const existing = id ? state.artworks.find(x=>x.id===id) : null;
   const a = existing ? JSON.parse(JSON.stringify(existing)) : {
-    id: uid('art'), title:'', artist:'', year:'', material:'', measurements:'',
+    id: uid('art'), title:'', artist:'', artistId:'', year:'', material:'', measurements:'',
     price:'', currency:'EUR', status:'available', expoId: state.expos[0]?.id || '',
     notes:'', catalogNo:'', order: Date.now(), photos:[]
   };
@@ -1001,7 +1015,14 @@ function openArtworkForm(id){
       <div class="panel-body">
         <div class="formgrid">
           <div class="formfield span2"><label>Title <span class="reqstar">*</span></label><input id="f_title" type="text" value="${esc(a.title)}"></div>
-          <div class="formfield"><label>Artist <span class="reqstar">*</span></label><input id="f_artist" type="text" value="${esc(a.artist)}"></div>
+          <div class="formfield"><label>Artist <span class="reqstar">*</span></label>
+            <select id="f_artistId">
+              <option value="" ${!a.artistId?'selected':''}>— Type a name below (no profile) —</option>
+              ${sortedArtists().map(x=>`<option value="${x.id}" ${a.artistId===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}
+              <option value="__new__">+ New artist…</option>
+            </select>
+            <input id="f_artist" type="text" value="${esc(a.artist)}" placeholder="Artist name" style="margin-top:6px;${a.artistId?'display:none;':''}">
+          </div>
           <div class="formfield"><label>Year</label><input id="f_year" type="text" value="${esc(a.year)}" placeholder="e.g. 2023 or c. 1998"></div>
           <div class="formfield"><label>Material</label><input id="f_material" type="text" value="${esc(a.material)}" placeholder="Oil on canvas"></div>
           <div class="formfield"><label>Measurements</label><input id="f_measurements" type="text" value="${esc(a.measurements)}" placeholder="60 × 80 cm"></div>
@@ -1030,7 +1051,7 @@ function openArtworkForm(id){
           <div class="formfield span2">
             <label>Photos</label>
             <div class="photogrid" id="photogrid"></div>
-            <input type="file" id="fileInput" accept="image/*" capture="environment" multiple style="display:none;">
+            <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
             <p class="hint">Photos are resized automatically to keep the gallery fast. Add multiple angles so viewers can browse and zoom.</p>
           </div>
         </div>
@@ -1104,9 +1125,47 @@ function openArtworkForm(id){
     }
   });
 
+  const artistSel = wrap.querySelector('#f_artistId');
+  const artistTextInput = wrap.querySelector('#f_artist');
+  artistSel.addEventListener('change', async e=>{
+    if(e.target.value==='__new__'){
+      const name = prompt('New artist name:');
+      if(name && name.trim()){
+        const newArtist = {id: uid('artist'), name: name.trim(), dob:'', birthCity:'', email:'', phone:'', website:'', favArtist:'', dream:'', notes:'', createdAt:new Date().toISOString()};
+        state.artists.push(newArtist);
+        const ok = await saveArtists();
+        if(!ok){
+          state.artists = state.artists.filter(x=>x.id!==newArtist.id);
+          e.target.value = a.artistId || '';
+          toast('Could not save the new artist — your device may be low on storage. Try again.');
+          return;
+        }
+        const opt = document.createElement('option');
+        opt.value = newArtist.id; opt.textContent = newArtist.name;
+        artistSel.insertBefore(opt, artistSel.lastElementChild);
+        artistSel.value = newArtist.id;
+        artistTextInput.style.display = 'none';
+      } else {
+        e.target.value = a.artistId || '';
+      }
+    } else if(e.target.value===''){
+      artistTextInput.style.display = '';
+      artistTextInput.focus();
+    } else {
+      artistTextInput.style.display = 'none';
+    }
+  });
+
   wrap.querySelector('#saveArtBtn').onclick = async ()=>{
     a.title = wrap.querySelector('#f_title').value.trim();
-    a.artist = wrap.querySelector('#f_artist').value.trim();
+    const artistIdVal = artistSel.value;
+    if(artistIdVal && artistIdVal!=='__new__'){
+      a.artistId = artistIdVal;
+      a.artist = artistById(artistIdVal)?.name || '';
+    } else {
+      a.artistId = '';
+      a.artist = artistTextInput.value.trim();
+    }
     a.year = wrap.querySelector('#f_year').value.trim();
     a.material = wrap.querySelector('#f_material').value.trim();
     a.measurements = wrap.querySelector('#f_measurements').value.trim();
@@ -1287,6 +1346,307 @@ function openExpoManager(){
   renderList();
 }
 
+/* ---------------- artists manager ---------------- */
+function artworkCountFor(artistId){
+  return state.artworks.filter(a=>a.artistId===artistId).length;
+}
+function openArtistManager(){
+  const applyUrl = new URL('apply.html', window.location.href).href;
+  const wrap = openOverlay(`
+    <div class="panel panel-form">
+      <div class="panel-head"><h2>Artists</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="panel-body">
+        <p class="eyebrow" style="margin-bottom:8px;">Send artists this link to apply from their phone</p>
+        <div class="formfield" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:20px;">
+          <div style="flex:1;"><input id="applyLinkField" type="text" readonly value="${esc(applyUrl)}"></div>
+          <button class="btn btn-plain" id="copyApplyLinkBtn" style="width:auto;flex:0 0 auto;padding:11px 16px;">Copy</button>
+        </div>
+        <div id="artistList"></div>
+        <div class="divider-hex" style="margin:22px 0 18px;">${hexDivider().replace(/<div[^>]*>|<\/div>/g,'')}</div>
+        <p class="eyebrow" style="margin-bottom:10px;">Add an artist</p>
+        <div class="formgrid">
+          <div class="formfield"><label>Name</label><input id="newArtistName" type="text" placeholder="Full name"></div>
+          <div class="formfield"><label>Email <span style="text-transform:none;">(optional)</span></label><input id="newArtistEmail" type="email" placeholder="artist@email.com"></div>
+        </div>
+        <button class="btn btn-solid" style="margin-top:12px;" id="addArtistBtn">+ Add artist</button>
+        <div class="divider-hex" style="margin:22px 0 18px;">${hexDivider().replace(/<div[^>]*>|<\/div>/g,'')}</div>
+        <p class="eyebrow" style="margin-bottom:10px;">Have a submission from an artist's phone?</p>
+        <p class="hint" style="margin-bottom:10px;">Import the file they sent you — it creates their profile and drafts their artworks for you to review.</p>
+        <input type="file" id="importSubmissionInput" accept="application/json,.json" style="display:none;">
+        <button class="btn btn-plain" id="importSubmissionBtn">Import submission…</button>
+      </div>
+      <div class="panel-foot"><button class="btn btn-plain" data-close>Close</button></div>
+    </div>`, {persistent:true});
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+  wrap.querySelector('#copyApplyLinkBtn').onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText(applyUrl);
+      toast('Link copied');
+    }catch(e){
+      wrap.querySelector('#applyLinkField').select();
+      toast('Select and copy the link above');
+    }
+  };
+
+  function renderList(){
+    const list = wrap.querySelector('#artistList');
+    const sorted = sortedArtists();
+    if(!sorted.length){ list.innerHTML = '<p class="hint">No artists yet.</p>'; return; }
+    list.innerHTML = sorted.map(x=>{
+      const count = artworkCountFor(x.id);
+      const sub = [x.email, x.dob].filter(Boolean).join(' · ');
+      return `
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13.5px;">${esc(x.name)}</div>
+          <div class="hint" style="margin-top:0;">${sub?esc(sub)+' · ':''}${count} artwork${count===1?'':'s'}</div>
+        </div>
+        <button class="iconbtn" data-editartist="${x.id}" title="Edit" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="iconbtn" data-delartist="${x.id}" title="Delete" style="width:28px;height:28px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('[data-editartist]').forEach(b=>b.onclick=()=>openArtistProfile(b.dataset.editartist, renderList));
+    list.querySelectorAll('[data-delartist]').forEach(b=>b.onclick=()=>delArtist(b.dataset.delartist, renderList));
+  }
+
+  wrap.querySelector('#addArtistBtn').onclick = async ()=>{
+    const name = wrap.querySelector('#newArtistName').value.trim();
+    if(!name){ toast('Give the artist a name first.'); return; }
+    const email = wrap.querySelector('#newArtistEmail').value.trim();
+    const newArtist = {id:uid('artist'), name, dob:'', birthCity:'', email, phone:'', website:'', favArtist:'', dream:'', notes:'', createdAt:new Date().toISOString()};
+    state.artists.push(newArtist);
+    const ok = await saveArtists();
+    if(!ok){
+      state.artists = state.artists.filter(x=>x.id!==newArtist.id);
+      toast('Could not save the artist — your device may be low on storage. Try again.');
+      return;
+    }
+    wrap.querySelector('#newArtistName').value='';
+    wrap.querySelector('#newArtistEmail').value='';
+    renderList();
+  };
+
+  wrap.querySelector('#importSubmissionBtn').onclick = ()=>wrap.querySelector('#importSubmissionInput').click();
+  wrap.querySelector('#importSubmissionInput').addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!data || data.app!=='SAIS-Submission' || !data.artist){
+        toast("That doesn't look like a SAIS artist submission file.");
+        return;
+      }
+      closeOverlay(wrap);
+      openImportPreview(data);
+    }catch(err){
+      console.error(err);
+      toast('Could not read that file.');
+    }
+  });
+
+  renderList();
+}
+async function delArtist(id, onChange){
+  const x = artistById(id);
+  if(!x) return;
+  const count = artworkCountFor(id);
+  const warning = count
+    ? `Delete ${x.name}? ${count} artwork${count===1?'':'s'} linked to them will keep their details but lose the link to this profile.`
+    : `Delete ${x.name}?`;
+  if(!confirm(warning)) return;
+  const prevArtists = state.artists.slice();
+  const affected = state.artworks.filter(a=>a.artistId===id);
+  state.artists = state.artists.filter(x=>x.id!==id);
+  affected.forEach(a=>{ a.artistId=''; });
+  const ok = await saveArtists();
+  if(!ok){
+    state.artists = prevArtists;
+    affected.forEach(a=>{ a.artistId=id; });
+    toast('Could not delete — try again.');
+    return;
+  }
+  if(typeof onChange==='function') onChange();
+  render();
+}
+function openArtistProfile(id, onChange){
+  const x = artistById(id);
+  if(!x) return;
+  const wrap = openOverlay(`
+    <div class="panel panel-form">
+      <div class="panel-head"><h2>${esc(x.name)}</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="panel-body">
+        <div class="formgrid">
+          <div class="formfield span2"><label>Name</label><input id="p_name" type="text" value="${esc(x.name)}"></div>
+          <div class="formfield"><label>Date of birth</label><input id="p_dob" type="text" value="${esc(x.dob)}"></div>
+          <div class="formfield"><label>City of birth</label><input id="p_city" type="text" value="${esc(x.birthCity)}"></div>
+          <div class="formfield"><label>Email</label><input id="p_email" type="email" value="${esc(x.email)}"></div>
+          <div class="formfield"><label>Phone</label><input id="p_phone" type="text" value="${esc(x.phone)}"></div>
+          <div class="formfield span2"><label>Website / Instagram</label><input id="p_website" type="text" value="${esc(x.website)}"></div>
+          <div class="formfield span2"><label>Favourite artist</label><input id="p_fav" type="text" value="${esc(x.favArtist)}"></div>
+          <div class="formfield span2"><label>Artistic dream</label><textarea id="p_dream">${esc(x.dream)}</textarea></div>
+          <div class="formfield span2"><label>Notes <span style="text-transform:none;">(private, just for you)</span></label><textarea id="p_notes">${esc(x.notes)}</textarea></div>
+        </div>
+      </div>
+      <div class="panel-foot"><button class="btn btn-plain" data-close>Cancel</button><button class="btn btn-solid" id="saveArtistBtn">Save</button></div>
+    </div>`, {persistent:true});
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+  wrap.querySelector('#saveArtistBtn').onclick = async ()=>{
+    const name = wrap.querySelector('#p_name').value.trim();
+    if(!name){ toast('Name is required.'); return; }
+    const prev = {...x};
+    x.name = name;
+    x.dob = wrap.querySelector('#p_dob').value.trim();
+    x.birthCity = wrap.querySelector('#p_city').value.trim();
+    x.email = wrap.querySelector('#p_email').value.trim();
+    x.phone = wrap.querySelector('#p_phone').value.trim();
+    x.website = wrap.querySelector('#p_website').value.trim();
+    x.favArtist = wrap.querySelector('#p_fav').value.trim();
+    x.dream = wrap.querySelector('#p_dream').value.trim();
+    x.notes = wrap.querySelector('#p_notes').value.trim();
+    const ok = await saveArtists();
+    if(!ok){
+      Object.assign(x, prev);
+      toast('Could not save — try again.');
+      return;
+    }
+    // keep every linked artwork's cached display name in sync with the profile
+    state.artworks.filter(a=>a.artistId===x.id).forEach(a=>{ a.artist = x.name; });
+    for(const a of state.artworks.filter(a=>a.artistId===x.id)) await saveArtwork(a);
+    if(typeof onChange==='function') onChange();
+    render();
+    closeOverlay(wrap);
+  };
+}
+
+function openImportPreview(data){
+  const artistData = data.artist || {};
+  const artworks = Array.isArray(data.artworks) ? data.artworks : [];
+  const existingMatch = artistData.email
+    ? state.artists.find(x=>x.email && x.email.toLowerCase()===artistData.email.toLowerCase())
+    : null;
+
+  const wrap = openOverlay(`
+    <div class="panel panel-form">
+      <div class="panel-head"><h2>Import submission</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="panel-body">
+        <p class="eyebrow" style="margin-bottom:8px;">Artist</p>
+        <p style="font-weight:600;font-size:15px;margin-bottom:4px;">${esc(artistData.name||'(no name given)')}</p>
+        <p class="hint" style="margin-bottom:14px;">${[artistData.email, artistData.dob, artistData.birthCity].filter(Boolean).map(esc).join(' · ')}</p>
+        ${existingMatch ? `<p class="hint" style="margin-bottom:14px;">This matches an existing profile (by email) — it will be updated, not duplicated.</p>` : ''}
+
+        <p class="eyebrow" style="margin-bottom:8px;">Artworks in this submission (${artworks.length})</p>
+        <div style="margin-bottom:14px;">
+          ${artworks.map(w=>`<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;">
+            <strong>${esc(w.title||'Untitled')}</strong>${w.year?', '+esc(w.year):''} — ${esc([w.medium,w.dimensions].filter(Boolean).join(', '))}${w.price?' · '+esc(w.price):''}
+          </div>`).join('') || '<p class="hint">No artworks listed.</p>'}
+        </div>
+
+        ${data.agreement && data.agreement.agreed ? `<p class="hint" style="margin-bottom:14px;">Agreement signed by ${esc(data.agreement.signedName||'')} on ${esc(data.agreement.signedDate||'')}.</p>` : `<p class="hint" style="margin-bottom:14px;color:var(--danger,#a33);">No signed agreement included in this submission.</p>`}
+
+        <p class="eyebrow" style="margin-bottom:8px;">Add these artworks to which collection?</p>
+        <select id="importExpoSelect" style="margin-bottom:6px;">
+          <option value="">— None for now —</option>
+          ${sortedExpos().map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+          <option value="__new__">+ New collection…</option>
+        </select>
+        <p class="hint">The submission file itself (with the signature) will be attached as a document on that collection.</p>
+      </div>
+      <div class="panel-foot"><button class="btn btn-plain" data-close>Cancel</button><button class="btn btn-solid" id="confirmImportBtn">Import</button></div>
+    </div>`, {persistent:true});
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+
+  const expoSelect = wrap.querySelector('#importExpoSelect');
+  expoSelect.addEventListener('change', async e=>{
+    if(e.target.value==='__new__'){
+      const name = prompt('New collection name:');
+      if(name && name.trim()){
+        const newExpo = {id: uid('expo'), name: name.trim(), date:'', venue:'', order: state.expos.length, docs:[]};
+        state.expos.push(newExpo);
+        const ok = await saveExpos();
+        if(!ok){
+          state.expos = state.expos.filter(x=>x.id!==newExpo.id);
+          e.target.value = '';
+          toast('Could not save the new collection — try again.');
+          return;
+        }
+        const opt = document.createElement('option');
+        opt.value = newExpo.id; opt.textContent = newExpo.name;
+        expoSelect.insertBefore(opt, expoSelect.lastElementChild);
+        expoSelect.value = newExpo.id;
+      } else {
+        e.target.value = '';
+      }
+    }
+  });
+
+  wrap.querySelector('#confirmImportBtn').onclick = async ()=>{
+    const btn = wrap.querySelector('#confirmImportBtn');
+    btn.disabled = true; btn.textContent = 'Importing…';
+
+    let artist = existingMatch;
+    if(artist){
+      Object.assign(artist, {
+        name: artistData.name || artist.name,
+        dob: artistData.dob || artist.dob,
+        birthCity: artistData.birthCity || artist.birthCity,
+        email: artistData.email || artist.email,
+        phone: artistData.phone || artist.phone,
+        website: artistData.website || artist.website,
+        favArtist: artistData.favArtist || artist.favArtist,
+        dream: artistData.dream || artist.dream,
+      });
+    } else {
+      artist = {
+        id: uid('artist'), name: artistData.name||'Unnamed artist', dob: artistData.dob||'',
+        birthCity: artistData.birthCity||'', email: artistData.email||'', phone: artistData.phone||'',
+        website: artistData.website||'', favArtist: artistData.favArtist||'', dream: artistData.dream||'',
+        notes:'', createdAt: new Date().toISOString()
+      };
+      state.artists.push(artist);
+    }
+    const artistOk = await saveArtists();
+    if(!artistOk){
+      toast('Could not save the artist profile — try again.');
+      btn.disabled = false; btn.textContent = 'Import';
+      return;
+    }
+
+    const expoId = expoSelect.value==='__new__' ? '' : expoSelect.value;
+    let importedCount = 0;
+    for(const w of artworks){
+      const priceNum = w.price && !isNaN(parseFloat(w.price)) ? parseFloat(w.price) : '';
+      const newArt = {
+        id: uid('art'), title: w.title||'', artist: artist.name, artistId: artist.id,
+        year: w.year||'', material: w.medium||'', measurements: w.dimensions||'',
+        price: priceNum, currency:'EUR', status:'available', expoId,
+        notes: data.notes||'', catalogNo:'', order: Date.now()+importedCount, photos:[]
+      };
+      const result = await saveArtwork(newArt);
+      if(result.ok){ state.artworks.push(newArt); importedCount++; }
+    }
+
+    if(expoId){
+      const expo = expoById(expoId);
+      if(expo){
+        if(!expo.docs) expo.docs = [];
+        const docEntry = {id: uid('doc'), name: `${artist.name} — submission.json`, size: JSON.stringify(data).length, type:'application/json', uploadedAt: new Date().toISOString()};
+        const fileOk = await sSet('sais:doc:'+expoId+':'+docEntry.id, 'data:application/json;base64,'+btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)))));
+        if(fileOk){
+          expo.docs.push(docEntry);
+          await saveExpos();
+        }
+      }
+    }
+
+    renderFilterOptions();
+    render();
+    closeOverlay(wrap);
+    toast(`Imported ${importedCount} artwork${importedCount===1?'':'s'} for ${artist.name}.`);
+  };
+}
+
 /* ---------------- documents (per collection) ---------------- */
 function fmtBytes(n){
   if(n < 1024) return n+' B';
@@ -1415,6 +1775,7 @@ function openDocsPanel(expoId, onChange){
 /* ---------------- backup / restore ---------------- */
 async function clearAllStorage(){
   await sDelete('sais:expos');
+  await sDelete('sais:artists');
   const artKeys = await sList('sais:artwork:');
   for(const k of artKeys) await sDelete(k);
   const photoKeys = await sList('sais:photo:');
@@ -1426,6 +1787,8 @@ async function restoreBackup(data){
   await clearAllStorage();
   state.expos = Array.isArray(data.expos) ? data.expos : [];
   await saveExpos();
+  state.artists = Array.isArray(data.artists) ? data.artists : [];
+  await saveArtists();
   const imported = Array.isArray(data.artworks) ? data.artworks : [];
   const restored = [];
   for(const a of imported){
@@ -1472,9 +1835,10 @@ function openBackupPanel(){
     }
     const payload = {
       app: 'SAIS',
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       expos: state.expos,
+      artists: state.artists,
       artworks: state.artworks,
       docs
     };
@@ -1608,6 +1972,7 @@ $('#filterSearch').addEventListener('input', e=>{
 $('#swipeBtn').addEventListener('click', openSwipeView);
 $('#adminBtn').addEventListener('click', handleAdminClick);
 $('#manageExposBtn').addEventListener('click', openExpoManager);
+$('#manageArtistsBtn').addEventListener('click', openArtistManager);
 $('#backupBtn').addEventListener('click', openBackupPanel);
 $('#addArtworkBtn').addEventListener('click', ()=>openArtworkForm());
 $('#priceListBtn').addEventListener('click', openPriceList);
