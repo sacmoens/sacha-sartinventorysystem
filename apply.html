@@ -203,7 +203,7 @@ footer.foot{text-align:center;padding:30px 0 10px;color:var(--ink-soft);font-siz
 // ---- EDIT THESE BEFORE SHARING THIS FORM WITH ARTISTS ----
 const CONFIG = {
   orgName: "Sacha's Wunderkammer",
-  orgEmail: "moenssacha@gmail.com",   // <-- your real inbox
+  orgEmail: "hello@sachaswunderkammer.com",   // <-- your real inbox
   commissionPct: 40,                           // <-- your commission %
   deliveryInfo: "arranged directly with you after you submit",
   collectionDays: 14
@@ -350,7 +350,7 @@ ${artworks.map((w,i)=>`${i+1}. ${w.title}${w.year?' ('+w.year+')':''} — ${[w.m
 
 Agreement signed by ${sigName} on ${payload.agreement.signedDate}.
 
-(Full details attached as a .json file — open ${CONFIG.orgName}'s SAIS app and use "Import submission" to bring this straight in.)`;
+(Full submission details are attached as a file.)`;
 
   const btn = document.getElementById('sendBtn');
   btn.disabled = true; btn.textContent = 'Preparing…';

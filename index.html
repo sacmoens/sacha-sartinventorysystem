@@ -1920,7 +1920,7 @@ function openPriceList(){
     const groupsPlusNone = [...groups];
     const hasUngrouped = state.artworks.some(a=>!a.expoId && (expoSel==='all'));
 
-    let html = `<div class="plist-header"><div class="logo-mark"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 91,27 91,73 50,96 9,73 9,27" stroke="#A97D40" stroke-width="2.4"/><circle cx="50" cy="50" r="15" stroke="#A97D40" stroke-width="1.3"/></svg></div><h1>SAIS Price List</h1><p class="sub">Sacha's Art Inventory System</p></div>
+    let html = `<div class="plist-header"><div class="logo-mark"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,4 91,27 91,73 50,96 9,73 9,27" stroke="#A97D40" stroke-width="2.4"/><circle cx="50" cy="50" r="15" stroke="#A97D40" stroke-width="1.3"/></svg></div><h1>Sacha's Wunderkammer</h1><p class="sub">Price List</p></div>
     <p class="plist-date">${new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>`;
 
     function rowsFor(list){
