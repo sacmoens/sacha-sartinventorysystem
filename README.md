@@ -33,8 +33,9 @@ Phones need these files served over `https://` (not opened as local files) for
 
 1. Go to https://github.com, and create a free account if you don't have one.
 2. Create a new repository (any name, e.g. `sais-app`) and set it to Public.
-3. Upload all the files in this folder (`index.html`, `apply.html`, `manifest.json`,
-   `sw.js`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`) using
+3. Upload all the files in this folder (`index.html`, `apply.html`, `gallery.html`,
+   `manifest.json`, `gallery-manifest.json`, `sw.js`, `gallery-sw.js`,
+   `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`) using
    "Add file → Upload files".
 4. In the repo, go to **Settings → Pages**, set "Branch" to `main` (or `master`)
    and folder to `/ (root)`, then Save.
@@ -66,6 +67,49 @@ pick the file they sent you. It creates their artist profile and drafts their
 artworks, ready for you to review, add photos to, and publish. The raw
 submission (including their signature) is also kept as an attached document on
 whichever collection you file it under.
+
+## Letting visitors browse on their own phones
+
+There are now two separate pages once you host this folder:
+
+- **`index.html`** — your private admin app, exactly as before.
+- **`gallery.html`** — a public, read-only page anyone can open on their own phone.
+  No login, no admin data. It shows titles, artists, years, materials, dimensions,
+  prices, and photos — never artist contact details, bios, attached documents, or
+  anything from your private tools.
+
+Nothing syncs automatically. You edit privately, and when you're ready for
+visitors to see the update, you tap **Publish** (in the admin strip). That copies
+a snapshot of your current collections and artworks to a file called
+`catalog.json`, which `gallery.html` reads. Until you publish again, visitors keep
+seeing whatever was last published — there's no live connection to your phone.
+
+### One-time setup for Publish
+
+Publishing writes that snapshot file into the same GitHub repository you're
+already hosting this app on, so it needs a personal access token:
+
+1. Go to https://github.com/settings/tokens/new while signed into the same
+   GitHub account.
+2. Give it any name, set an expiration you're comfortable with, and check the
+   **repo** permission box (just that one).
+3. Generate it, and copy the token (it's only shown once).
+4. In the app, unlock admin mode → **Publish** → paste your GitHub username, the
+   repository name (e.g. `sais-app`), and the token → Save.
+5. Tap **Publish now**. The first publish creates `catalog.json` in your repo
+   automatically — nothing else to configure.
+
+The token is stored only on your device, the same as everything else in this app.
+
+### Sharing the gallery link
+
+Once you've published at least once, the Publish panel shows a direct link —
+something like `https://yourname.github.io/sais-app/gallery.html` — with a Copy
+button. Visitors can open it in any browser, browse or swipe through the
+collections, and even add it to their own home screen the same way you did with
+the main app.
+
+
 
 ## After that
 

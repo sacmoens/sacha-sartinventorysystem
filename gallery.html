@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>SAIS — Sacha's Art Inventory System</title>
-<link rel="manifest" href="manifest.json">
+<title>Sacha's Wunderkammer — Gallery</title>
+<link rel="manifest" href="gallery-manifest.json">
 <meta name="theme-color" content="#A97D40">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SAIS">
+<meta name="apple-mobile-web-app-title" content="Wunderkammer">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,500;0,9..144,600;1,9..144,440&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -343,8 +343,8 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
       </svg>
     </div>
     <div class="brand">
-      <h1>SAIS</h1>
-      <p class="sub">Sacha's Art Inventory System</p>
+      <h1>Sacha's Wunderkammer</h1>
+      <p class="sub">Gallery</p>
     </div>
     <div class="header-actions">
       <button class="iconbtn no-print" id="swipeBtn" title="Swipe view">
@@ -352,9 +352,6 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
       </button>
       <button class="iconbtn no-print" id="priceListBtn" title="Price list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h5"/></svg>
-      </button>
-      <button class="iconbtn no-print" id="adminBtn" title="Admin">
-        <svg id="lockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
       </button>
     </div>
   </div>
@@ -376,13 +373,6 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
     <div class="field-inline searchwrap">
       <label>Search</label>
       <input type="text" id="filterSearch" placeholder="Title or artist…">
-    </div>
-    <div class="admin-strip" id="adminStrip" style="display:none;">
-      <button class="btn btn-plain" id="manageExposBtn">Collections</button>
-      <button class="btn btn-plain" id="manageArtistsBtn">Artists</button>
-      <button class="btn btn-plain" id="backupBtn">Backup</button>
-      <button class="btn btn-plain" id="publishBtn">Publish</button>
-      <button class="btn btn-solid" id="addArtworkBtn">+ Add artwork</button>
     </div>
   </div>
 </header>
@@ -607,14 +597,19 @@ function compressImage(file, maxDim, quality){
 async function init(){
   render();
   try{
-    const [expos, artworks, artists] = await Promise.all([loadExpos(), loadArtworks(), loadArtists()]);
-    state.expos = expos;
-    state.artworks = artworks;
-    state.artists = artists;
+    const res = await fetch('./catalog.json?t=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    state.expos = Array.isArray(data.expos) ? data.expos : [];
+    state.artworks = Array.isArray(data.artworks) ? data.artworks : [];
+    state.artists = [];
+    state.publishedAt = data.publishedAt || null;
     state.loading = false;
   }catch(e){
     state.loading = false;
-    state.error = 'Could not load the gallery from this device. Try reloading the app.';
+    state.error = navigator.onLine
+      ? "Could not load the gallery right now. Please try again in a moment."
+      : "You're offline, and no gallery has been saved on this device yet. Connect once to load it.";
   }
   renderFilterOptions();
   render();
@@ -655,12 +650,10 @@ function filteredArtworks(){
 }
 
 function render(){
-  $('#adminStrip').style.display = state.isAdmin ? 'flex' : 'none';
-  $('#lockIcon').innerHTML = state.isAdmin
-    ? '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0"/>'
-    : '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
-  $('#adminBtn').classList.toggle('active', state.isAdmin);
-
+  if(state.publishedAt){
+    const sub = document.querySelector('.brand .sub');
+    if(sub) sub.textContent = 'Updated ' + new Date(state.publishedAt).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  }
   if(state.loading){
     galleryRoot.innerHTML = `<div class="state-msg"><div class="spinner"></div><p>Loading the gallery…</p></div>`;
     return;
@@ -2117,19 +2110,13 @@ $('#filterSearch').addEventListener('input', e=>{
   searchDebounce = setTimeout(()=>{ state.filter.q=e.target.value; render(); }, 180);
 });
 $('#swipeBtn').addEventListener('click', openSwipeView);
-$('#adminBtn').addEventListener('click', handleAdminClick);
-$('#manageExposBtn').addEventListener('click', openExpoManager);
-$('#manageArtistsBtn').addEventListener('click', openArtistManager);
-$('#publishBtn').addEventListener('click', openPublishPanel);
-$('#backupBtn').addEventListener('click', openBackupPanel);
-$('#addArtworkBtn').addEventListener('click', ()=>openArtworkForm());
 $('#priceListBtn').addEventListener('click', openPriceList);
 
 window.SAIS = {openDetail, openArtworkForm, confirmDeleteArtwork};
 
 init();
 if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW registration failed', e)); });
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('gallery-sw.js').catch(e=>console.warn('SW registration failed', e)); });
 }
 })();
 </script>
