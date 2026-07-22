@@ -68,6 +68,17 @@ artworks, ready for you to review, add photos to, and publish. The raw
 submission (including their signature) is also kept as an attached document on
 whichever collection you file it under.
 
+## The agreement builder
+
+`contract.html` is a separate, general-purpose tool — it's not tied to your
+gallery specifically, and doesn't touch any of your app's data. Anyone can open
+it, fill in both parties' names, set the sales split (artist / gallery / an
+optional third share for a pool or venue fee), delivery and collection terms,
+and sign with a finger-drawn signature, then use **Print / Save as PDF** to get
+a document both sides can keep. The Artists panel has a Copy-link button for it,
+same as the submission form link. It's a plain template, not legal advice —
+that disclaimer is printed on the document itself too.
+
 ## Letting visitors browse on their own phones
 
 There are now two separate pages once you host this folder:

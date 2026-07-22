@@ -1357,14 +1357,20 @@ function artworkCountFor(artistId){
 }
 function openArtistManager(){
   const applyUrl = new URL('apply.html', window.location.href).href;
+  const contractUrl = new URL('contract.html', window.location.href).href;
   const wrap = openOverlay(`
     <div class="panel panel-form">
       <div class="panel-head"><h2>Artists</h2><button class="closex" data-close>${xIcon()}</button></div>
       <div class="panel-body">
         <p class="eyebrow" style="margin-bottom:8px;">Send artists this link to apply from their phone</p>
-        <div class="formfield" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:20px;">
+        <div class="formfield" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:16px;">
           <div style="flex:1;"><input id="applyLinkField" type="text" readonly value="${esc(applyUrl)}"></div>
           <button class="btn btn-plain" id="copyApplyLinkBtn" style="width:auto;flex:0 0 auto;padding:11px 16px;">Copy</button>
+        </div>
+        <p class="eyebrow" style="margin-bottom:8px;">General agreement builder — usable with any artist, any gallery</p>
+        <div class="formfield" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:20px;">
+          <div style="flex:1;"><input id="contractLinkField" type="text" readonly value="${esc(contractUrl)}"></div>
+          <button class="btn btn-plain" id="copyContractLinkBtn" style="width:auto;flex:0 0 auto;padding:11px 16px;">Copy</button>
         </div>
         <div id="artistList"></div>
         <div class="divider-hex" style="margin:22px 0 18px;">${hexDivider().replace(/<div[^>]*>|<\/div>/g,'')}</div>
@@ -1389,6 +1395,15 @@ function openArtistManager(){
       toast('Link copied');
     }catch(e){
       wrap.querySelector('#applyLinkField').select();
+      toast('Select and copy the link above');
+    }
+  };
+  wrap.querySelector('#copyContractLinkBtn').onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText(contractUrl);
+      toast('Link copied');
+    }catch(e){
+      wrap.querySelector('#contractLinkField').select();
       toast('Select and copy the link above');
     }
   };
