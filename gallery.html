@@ -830,10 +830,17 @@ function openDetail(id){
             ${a.measurements?`<li><span>Measurements</span><span>${esc(a.measurements)}</span></li>`:''}
           </ul>
           ${a.notes?`<div class="detail-notes">${esc(a.notes)}</div>`:''}
+          <button class="btn btn-plain" id="shareCardBtn" style="margin-top:16px;width:auto;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px;"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.7l7.6-4.4M8.2 13.3l7.6 4.4"/></svg>
+            Share this artwork
+          </button>
         </div>
       </div>
     </div>`);
   wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+
+  const shareBtn = wrap.querySelector('#shareCardBtn');
+  if(shareBtn) shareBtn.onclick = ()=>shareArtworkCard(a, shareBtn);
 
   const stageImg = wrap.querySelector('#stageImg');
   function show(i){
@@ -845,6 +852,133 @@ function openDetail(id){
   if(wrap.querySelector('#nextPhoto')) wrap.querySelector('#nextPhoto').onclick=()=>show(idx+1);
   wrap.querySelectorAll('#thumbstrip button').forEach(b=>b.onclick=()=>show(+b.dataset.i));
   if(stageImg) stageImg.onclick = ()=>stageImg.classList.toggle('zoomed');
+}
+
+/* ---------------- share artwork card ---------------- */
+function loadImagePromise(src){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>reject(new Error('image load failed'));
+    img.src = src;
+  });
+}
+function drawImageCover(ctx, img, x, y, w, h){
+  const imgRatio = img.width/img.height, boxRatio = w/h;
+  let sx=0, sy=0, sw=img.width, sh=img.height;
+  if(imgRatio > boxRatio){
+    sw = img.height*boxRatio; sx = (img.width-sw)/2;
+  } else {
+    sh = img.width/boxRatio; sy = (img.height-sh)/2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+async function buildShareCardCanvas(a){
+  await (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve());
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FBFAF6'; ctx.fillRect(0,0,W,H);
+
+  const photoH = Math.round(H*0.66);
+  const cover = a.photos && a.photos[0];
+  if(cover){
+    try{
+      const img = await loadImagePromise(cover);
+      drawImageCover(ctx, img, 0, 0, W, photoH);
+    }catch(e){
+      ctx.fillStyle = '#F3F0E8'; ctx.fillRect(0,0,W,photoH);
+    }
+  } else {
+    ctx.fillStyle = '#F3F0E8'; ctx.fillRect(0,0,W,photoH);
+    ctx.fillStyle = '#6B6152'; ctx.font = '30px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No photo available', W/2, photoH/2);
+  }
+
+  ctx.strokeStyle = '#A97D40'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(60, photoH+36); ctx.lineTo(W-60, photoH+36); ctx.stroke();
+
+  let y = photoH + 96;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#221D14';
+  ctx.font = '600 52px Fraunces, Georgia, serif';
+  const titleLines = wrapTextCapped(ctx, a.title||'Untitled', 60, y, W-120, 58, 3);
+  y += titleLines * 58 + 18;
+
+  ctx.fillStyle = '#A97D40';
+  ctx.font = '700 28px Inter, sans-serif';
+  ctx.fillText((a.artist||'Unknown artist').toUpperCase(), 60, y);
+  y += 54;
+
+  ctx.fillStyle = '#6B6152';
+  ctx.font = '30px Inter, sans-serif';
+  const specifics = [a.year, a.material, a.measurements].filter(Boolean).join('   ·   ');
+  if(specifics){ ctx.fillText(specifics, 60, y); y += 60; }
+
+  const st = STATUS[a.status] || STATUS.available;
+  ctx.fillStyle = '#221D14';
+  ctx.font = '700 46px Inter, sans-serif';
+  const priceText = (a.status==='sold'||a.status==='nfs') ? st.label : money(a.price, a.currency);
+  ctx.fillText(priceText, 60, y);
+
+  return canvas;
+}
+function wrapTextCapped(ctx, text, x, y, maxWidth, lineHeight, maxLines){
+  const words = String(text).split(' ');
+  const lines = [];
+  let line = '';
+  for(const word of words){
+    const test = line ? line+' '+word : word;
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if(line) lines.push(line);
+
+  let shown = lines;
+  if(lines.length > maxLines){
+    shown = lines.slice(0, maxLines);
+    let last = shown[maxLines-1];
+    while(ctx.measureText(last+'…').width > maxWidth && last.length>0){
+      last = last.slice(0, -1);
+    }
+    shown[maxLines-1] = last.replace(/\s+$/,'') + '…';
+  }
+  shown.forEach((ln,i)=>ctx.fillText(ln, x, y+i*lineHeight));
+  return shown.length;
+}
+async function shareArtworkCard(a, btn){
+  const originalText = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled = true; btn.textContent = 'Preparing…'; }
+  try{
+    const canvas = await buildShareCardCanvas(a);
+    const blob = await new Promise(resolve=>canvas.toBlob(resolve, 'image/png', 0.95));
+    if(!blob) throw new Error('canvas export failed');
+    const fileName = 'artwork-' + (a.title||'untitled').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40) + '.png';
+    const file = new File([blob], fileName, {type:'image/png'});
+    const shareText = `${a.title||'Untitled'} — ${a.artist||'Unknown artist'}`;
+
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:a.title||'Artwork', text:shareText});
+    } else {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = fileName;
+      document.body.appendChild(link); link.click(); link.remove();
+      URL.revokeObjectURL(url);
+      toast('Image downloaded — attach it to your message.');
+    }
+  }catch(err){
+    if(err && err.name!=='AbortError'){
+      console.error('shareArtworkCard failed', err);
+      toast('Could not share — try again.');
+    }
+  }
+  if(btn){ btn.disabled = false; btn.innerHTML = originalText; }
 }
 
 /* ---------------- swipe view ---------------- */
@@ -2117,6 +2251,12 @@ window.SAIS = {openDetail, openArtworkForm, confirmDeleteArtwork};
 init();
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('gallery-sw.js').catch(e=>console.warn('SW registration failed', e)); });
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(swRefreshing) return;
+    swRefreshing = true;
+    window.location.reload();
+  });
 }
 })();
 </script>

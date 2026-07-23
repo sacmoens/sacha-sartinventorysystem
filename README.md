@@ -68,6 +68,23 @@ artworks, ready for you to review, add photos to, and publish. The raw
 submission (including their signature) is also kept as an attached document on
 whichever collection you file it under.
 
+## What's new in this round
+
+- **Manage menu** — Collections, Artists, Backup, and Publish now live behind
+  one "Manage" button instead of crowding the header. "+ Add artwork" is the
+  one obvious action.
+- **Remember this device** — checked by default when you enter your PIN, so
+  you won't be asked for it every time you reopen the app on your own phone.
+  Turn it off any time from Manage → "Forget this device."
+- **Updates apply automatically now** — you still need to re-upload changed
+  files, but the app itself no longer needs the old close-and-reopen-twice
+  trick; it reloads itself once when a new version is ready.
+- **Share this artwork** — in any artwork's detail view, this generates a
+  clean image card (photo, title, artist, specifics, price or status) sized
+  for sharing, and opens your phone's native share sheet — WhatsApp, Mail,
+  Messages, whatever you've got. Available in both the admin app and the
+  public gallery.
+
 ## The agreement builder
 
 `contract.html` is a separate, general-purpose tool — it's not tied to your
