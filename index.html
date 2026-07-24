@@ -344,6 +344,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
   *{animation-duration:.001s !important;transition-duration:.001s !important;}
 }
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -2274,7 +2275,8 @@ function openPriceList(){
           <input type="checkbox" id="plIncludeNfs" style="width:16px;height:16px;">
           <label style="text-transform:none;font-size:13px;">Include not-for-sale works</label>
         </div>
-        <button class="btn btn-solid" id="printBtn" style="margin-left:auto;">Print / Save as PDF</button>
+        <button class="btn btn-plain" id="artlogicBtn" style="margin-left:auto;">Download Artlogic file (.xlsx)</button>
+        <button class="btn btn-solid" id="printBtn">Print / Save as PDF</button>
       </div>
       <div id="priceSheet"></div>
     </div>`);
@@ -2331,7 +2333,43 @@ function openPriceList(){
   wrap.querySelector('#plIncludeSold').addEventListener('change', draw);
   wrap.querySelector('#plIncludeNfs').addEventListener('change', draw);
   wrap.querySelector('#printBtn').addEventListener('click', ()=>window.print());
+  wrap.querySelector('#artlogicBtn').addEventListener('click', ()=>{
+    const expoSel = wrap.querySelector('#plExpo').value;
+    const inclSold = wrap.querySelector('#plIncludeSold').checked;
+    const inclNfs = wrap.querySelector('#plIncludeNfs').checked;
+    const list = state.artworks.filter(a=>{
+      if(expoSel!=='all' && a.expoId!==expoSel) return false;
+      if(a.status==='sold' && !inclSold) return false;
+      if(a.status==='nfs' && !inclNfs) return false;
+      return true;
+    });
+    exportArtlogicXlsx(sortedArtworksFor(list));
+  });
   draw();
+}
+
+/* ---------------- Artlogic export ---------------- */
+const ARTLOGIC_HEADERS = ['Artist','Artist dates','Artist sort','Stock number','Title','Year','Signed and dated','Period','Genre','Series','Medium','Dimensions','This artwork is a print or edition','Edition data record','Edition details','Edition publisher or notes','Importance rating','Artwork type','Printed status','Catalogue raisonné','Courtesy or credit line','Copyright line','Photo credit','Current owner',"Artist's reference number",'Consultant','Packed','Framed','Framing details','Commentary or description','Exclude description from presentations','Additional information','Search terms','Selected artwork lists','Selected interests','Provenance','Exclude provenance from presentations','Exhibitions','Exclude exhibitions from presentations','Literature','Exclude literature from presentations','Publications','Exclude publications from presentations','Collections','Auction history','Status','Availability','Is equipment','Market','Retail tax rate','Apply tax at current rate','Retail currency','Retail price','Override display price label','Custom display price label','Custom display price (ex. tax)','Custom display price (inc. tax)','Retail price update date','Retail price history','Retail price extras value','Retail price extras for (eg. framing)','Retail price extras paid by artist','Artist resale rights apply','Selling price','Sold to','Sale date','Invoice number','Sale currency (manually entered sale)','Sale price (manually entered sale)','Sale tax rate (manually entered sale)','Sale discount (manually entered sale)','Production costs total','Production costs total gallery','Production costs total artist','Production costs total third parties','Sale price extras (manually entered sale)','Sale price extras text (manually entered sale)','Sale notes','Production cost details','Production status','Production status date','Other costs total gallery','Other costs total artist','Other costs total third parties','Other costs total','Consigned by','Consignor is the artist','Consigned from date','Consigned to date','Consignment returned','Consignment in reminder date','Consigned by calculate from net','Consigned by net value','Consigned by percentage to gallery','Consignment notes','Consignor contract signed','Consignor non standard contract','Consignment invoice status','Purchased from','Date purchased','Date purchase paid','Owned in shares','Purchase currency','Purchase price','Advertised purchase price','Advertised purchase price currency','Advertised purchase price discount value','Advertised purchase price discount rate','Purchase tax rate','Purchase conversion rate','Purchase price alt currency','Purchase price alt currency value','Purchase price alt currency conversion rate','Purchase share','Other owners','Purchase notes','Consigned to','Consigned to from date','Consigned to until','Consigned to returned','Consignment out reminder date','Consigned to calculate from net','Consigned to net value','Consigned to percentage','Consignment to notes','Consigned to history','Insured','Insured by','Insurance notes','Insurance currency','Insurance value','Insurance valuation date','Insurance valuation by','Insurance history','Additional financial info','Offered to','Offered by','Offered date','Offer price','Offer notes','Reserved for','Reserved for until','Reserved by','Loaned to','Loaned to from','Loaned to until','Loaned to reminder date','Loan returned','Date returned','Loan notes','Loan history','On loan','On loan text','Gallery','Country of origin','Location code','Location','Location detail','Location last updated','Location notes','Location history','Last examined by','Last examined date','Export number','Shipped from location','Shipped from full address','Shipper/Courier','Shipped to address','Shipped to','Shipping update date','Shipping notes','Shipping history','Object weight','Packed weight (kg)','Volumetric weight (kg)','Packed height (cm)','Packed width (cm)','Packed depth (cm)','Packing and crating notes','Import number','T.A. entry date','T.A. return due','Closed','T.A. reminder date','T.A. notes','Declared value currency','Declared value','Import duty currency','Import duty paid','History','Export license number','Export license delivery date','Export license expiry date','Export license reminder date','Export license declared value currency','Export license declared value','Export license status','Export license notes','Export license history','Condition','Condition report status','Conservation','Materials','Manufacturer','Photography Status','Available photographs','Video embed code','Include secondary images in private views and reports','Show on website (artworks and artists pages)','Show price on website',"Represents this artist on the 'Artists' page of the website",'Send to website','Description for website',"Enable 'View on a wall'",'Override height (cms)','Override width (cms)','Override depth (cms)','Additional certificates','Creation date','Archived record','Created by','Images'];
+function exportArtlogicXlsx(artworks){
+  if(typeof XLSX === 'undefined'){
+    toast('Could not load the export library — check your connection and try again.');
+    return;
+  }
+  const rows = [ARTLOGIC_HEADERS];
+  artworks.forEach(a=>{
+    const row = new Array(ARTLOGIC_HEADERS.length).fill('');
+    row[ARTLOGIC_HEADERS.indexOf('Artist')] = a.artist || '';
+    row[ARTLOGIC_HEADERS.indexOf('Title')] = a.title || '';
+    row[ARTLOGIC_HEADERS.indexOf('Year')] = a.year || '';
+    row[ARTLOGIC_HEADERS.indexOf('Dimensions')] = a.measurements || '';
+    row[ARTLOGIC_HEADERS.indexOf('Retail price')] = (a.price===''||a.price==null) ? '' : a.price;
+    rows.push(row);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet');
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `sais-artlogic-import-${stamp}.xlsx`);
 }
 
 /* ---------------- filters wiring ---------------- */

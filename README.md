@@ -85,6 +85,15 @@ whichever collection you file it under.
   Messages, whatever you've got. Available in both the admin app and the
   public gallery.
 
+- **Download Artlogic file (.xlsx)** — in Price List, next to Print/Save as PDF.
+  Exports whichever artworks are currently shown (respecting the collection and
+  sold/not-for-sale filters) into a spreadsheet shaped exactly like Artlogic's
+  own bulk-import template, ready to upload there. Only artist, title, year,
+  dimensions, and price are filled in — every other column in Artlogic's
+  template is left blank for you to fill in there if needed. This needs an
+  internet connection at the moment you export (it loads a small library to
+  build the file) — offline, you'll get a clear message instead of a broken file.
+
 ## The agreement builder
 
 `contract.html` is a separate, general-purpose tool — it's not tied to your
