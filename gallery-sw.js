@@ -2,7 +2,7 @@
 // instantly and works offline. catalog.json — the actual published data — is always
 // fetched fresh first so visitors see the latest publish; it only falls back to the
 // cached copy if there's no signal at all.
-const CACHE_NAME = 'wunderkammer-gallery-v2';
+const CACHE_NAME = 'wunderkammer-gallery-v3';
 const SHELL_FILES = [
   './gallery.html',
   './gallery-manifest.json',
