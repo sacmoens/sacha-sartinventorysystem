@@ -387,6 +387,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
         <option value="available">Available</option>
         <option value="reserved">Reserved</option>
         <option value="sold">Sold</option>
+        <option value="needx">Needs exposure</option>
         <option value="nfs">Not for sale</option>
       </select>
     </div>
@@ -517,6 +518,9 @@ async function sList(prefix){
   }catch(e){ console.error('storage list failed for', prefix, e); return []; }
 }
 
+async function loadX(){try{const v=await sGet('sais:x:data');return v?JSON.parse(v):null}catch(e){return null}}
+function xHours(id){const d=state.xd;if(!d||!d.events)return null;const today=new Date().toISOString().slice(0,10),cf=e=>e.intensity!=null?e.intensity:((d.set&&d.set.coef&&d.set.coef[e.type])??1),tH=t=>{const p=(t||'0:0').split(':');return +p[0]+p[1]/60};let t=0;d.events.forEach(e=>{if(e.date<=today&&(e.artworkIds||[]).includes(id)){const days=(new Date(e.endDate||e.date)-new Date(e.date))/864e5+1;t+=days*Math.max(0,tH(e.endTime)-tH(e.startTime))*cf(e)}});return t}
+function xBar(a){if(!state.isAdmin||a.status==='sold'||a.status==='nfs')return '';const h=xHours(a.id);if(h===null)return '';const T=(state.xd.set&&state.xd.set.target)||8,p=Math.min(100,h/T*100);return `<div style="margin-top:8px"><div style="height:4px;background:var(--line);border-radius:3px;overflow:hidden"><i style="display:block;height:100%;width:${p}%;background:var(--gold)"></i></div><div style="font-size:10.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.04em">${h>=T?'Exposure target reached ✓':Math.round(h*10)/10+' / '+T+'h exposure'}</div></div>`}
 async function loadExpos(){
   const v = await sGet('sais:expos', true);
   return v ? JSON.parse(v) : [];
@@ -625,6 +629,7 @@ async function init(){
     state.expos = expos;
     state.artworks = artworks;
     state.artists = artists;
+    state.xd = await loadX();
     if(remembered==='true') state.isAdmin = true;
     state.loading = false;
   }catch(e){
@@ -660,7 +665,7 @@ function filteredArtworks(){
   const {expo, status, q} = state.filter;
   return state.artworks.filter(a=>{
     if(expo!=='all' && a.expoId!==expo) return false;
-    if(status!=='all' && a.status!==status) return false;
+    if(status==='needx'){if(a.status!=='available'&&a.status!=='reserved')return false;const h=xHours(a.id);if(h===null||h>=((state.xd&&state.xd.set&&state.xd.set.target)||8))return false;}else if(status!=='all' && a.status!==status) return false;
     if(q){
       const hay = (a.title+' '+a.artist).toLowerCase();
       if(!hay.includes(q.toLowerCase())) return false;
@@ -717,7 +722,7 @@ function cardHTML(a, i){
       <p class="title">${esc(a.title)||'Untitled'}</p>
       <p class="artist">${esc(a.artist)||'Unknown artist'}</p>
       <p class="meta">${[a.year, a.material].filter(Boolean).map(esc).join(' · ')}</p>
-      <div class="bottomrow">${priceOrStatus}</div>
+      <div class="bottomrow">${priceOrStatus}</div>${xBar(a)}
     </div>
   </div>`;
 }
@@ -852,7 +857,7 @@ function openDetail(id){
           <p class="eyebrow">${esc(expoById(a.expoId)?.name || '')}</p>
           <h2>${esc(a.title)||'Untitled'}</h2>
           <p class="artist">${esc(a.artist)||'Unknown artist'}</p>
-          <div class="detail-price-row">
+          ${xBar(a)}<div class="detail-price-row">
             ${a.status==='sold'||a.status==='nfs' ? `<span class="badge ${st.cls}">${st.label}</span>` : `<span class="price">${esc(money(a.price,a.currency))}</span>`}
             ${(a.status!=='sold'&&a.status!=='nfs') ? `<span class="badge ${st.cls}">${st.label}</span>` : ''}
           </div>
