@@ -41,7 +41,26 @@ main{max-width:1200px;margin:0 auto;padding:20px 16px 80px}
 @keyframes pop{from{transform:translate(-50%,20px);opacity:0}}
 .hb{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}.hb .bar{flex:1;height:14px}.hb .bar i{background:var(--ink)}.hb span:first-child{width:64px;color:var(--mut)}
 header.top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}nav .more{display:none}
-@media(max-width:700px){nav{position:fixed;top:auto;bottom:0;left:0;right:0;border:0;border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));gap:2px;overflow:visible}nav button{flex:1;border:0;border-radius:12px;padding:12px 2px;font-size:12px}nav .x2{display:none}nav .more{display:block}main{padding-bottom:110px}input,select,textarea{font-size:16px}.tw{bottom:90px}.big{font-size:clamp(44px,16vw,80px)}}</style></head><body>
+@media(min-width:0px){nav{position:fixed;top:auto;bottom:0;left:0;right:0;border:0;border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));gap:2px;overflow:visible}nav button{flex:1;border:0;border-radius:12px;padding:12px 2px;font-size:12px}nav .x2{display:none}nav .more{display:block}main{padding-bottom:110px}input,select,textarea{font-size:16px}.tw{bottom:90px}.big{font-size:clamp(44px,16vw,80px)}}
+/* ---- dark glass theme ---- */
+:root{--bg:#0d0c0a;--card:rgba(255,255,255,.045);--ink:#f2ecdf;--mut:#9b927e;--line:rgba(255,255,255,.1);--acc:#c9a15a;--gold:#e0bb75;--ok:#5fcf9b;color-scheme:dark}
+body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}html{scroll-behavior:smooth}
+h1,h2,h3,.big{font-family:'Space Grotesk','Inter',sans-serif}
+header.top{background:rgba(13,12,10,.72);backdrop-filter:blur(18px)}
+.card,.mo,.rec,.ach,.pick,.ev{backdrop-filter:blur(10px);border-radius:18px}.ev{border-radius:12px}
+.card:hover{box-shadow:0 24px 50px rgba(0,0,0,.55),0 0 0 1px rgba(201,161,90,.45)}
+.bar{background:rgba(255,255,255,.08)}.bar i,.hb .bar i{background:linear-gradient(90deg,#8a6530,#e6c684)}
+.bar.ok i{background:linear-gradient(90deg,#e6c684,#fff1c9);box-shadow:0 0 16px rgba(230,198,132,.6)}
+button.on,button.p,button.a{background:linear-gradient(135deg,#e0bb75,#a97d40);color:#14110b;border-color:transparent}
+input,select,textarea{background:rgba(255,255,255,.05)}
+.mod{background:#151310;border:1px solid var(--line)}.ov{background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
+.sum{background:rgba(201,161,90,.16);border:1px solid rgba(201,161,90,.4);color:var(--ink);backdrop-filter:blur(10px)}
+.tw,.tag{background:linear-gradient(135deg,#e0bb75,#a97d40);color:#14110b}
+nav{left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;max-width:560px;margin:0 auto!important;border-radius:22px!important;border:1px solid rgba(255,255,255,.1)!important;background:rgba(24,22,18,.7)!important;backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:0 14px 40px rgba(0,0,0,.6);padding:6px!important;}
+nav button{border:0}nav button.onbackground:linear-gradient(135deg,#e0bb75,#a97d40)!important;color:#14110b!important;box-shadow:0 0 18px rgba(201,161,90,.35)
+</style><meta name="theme-color" content="#0d0c0a">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+</head><body>
 <header class="top"><a class="logo" href="index.html" style="color:inherit;text-decoration:none">← SAIS <b>·</b> Exposure</a><span id="yr"></span></header><nav></nav><main id="app"></main>
 <div class="ov" id="ov"><div class="mod" id="mod"></div></div><div class="tw" id="tw"></div>
 <script>
@@ -85,9 +104,9 @@ const avail=()=>S.artworks.filter(a=>!sold(a)),deficit=a=>Math.max(0,T(a)-expo(a
 const bar=(v,t,c='')=>`<div class="bar ${v>=t?'ok':''} ${c}"><i data-w="${Math.min(100,v/t*100)}"></i></div>`;
 function toast(m){const t=$('#tw');t.textContent=m;t.className='tw s';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='tw',3800)}
 /* render */
-const TABS=[['home','Dashboard'],['cal','Events'],['an','Insights'],['set','Settings']];
+const TABS=[['inv','Inventory'],['home','Dashboard'],['cal','Events'],['an','Insights'],['man','Manage']];
 function render(){document.querySelectorAll('nav button,nav select').forEach(x=>x.remove());const n=$('nav');
-n.insertAdjacentHTML('beforeend',TABS.map((t,i)=>`<button data-a="tab" data-id="${t[0]}" class="${view==t[0]?'on':''} ${i>3?'x2':''}">${t[1]}</button>`).join(''));$('#yr').innerHTML=`<select data-a="year" style="width:auto">${[CY-1,CY,CY+1,CY+2].map(y=>`<option ${y==S.year?'selected':''}>${y}</option>`).join('')}</select>`;
+n.insertAdjacentHTML('beforeend',TABS.map((t,i)=>`<button data-a="tab" data-id="${t[0]}" class="${view==t[0]?'on':''} ">${t[1]}</button>`).join(''));$('#yr').innerHTML=`<select data-a="year" style="width:auto">${[CY-1,CY,CY+1,CY+2].map(y=>`<option ${y==S.year?'selected':''}>${y}</option>`).join('')}</select>`;
 $('#app').innerHTML={home,cal:cal2,an:an2,set}[view]();requestAnimationFrame(()=>setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),30))}
 function card(a){const e=expo(a,cut()),t=T(a),s=sold(a);return`<div class="card" data-a="prof" data-id="${a.id}">${s?'<span class="tag">SOLD</span>':''}<img src="${a.image}" alt="" loading="lazy"><div class="in"><h3>${esc(a.title)}</h3><div class="lab">${a.year} · ${eur(s?s.salePrice:a.price)}</div><div style="margin:10px 0 4px" class="lab">Exposure ${f(e)} / ${t}h</div>${bar(e,t)}<div class="need ${e>=t?'ok':''}">${e>=t?'TARGET REACHED ✓':'⚡ NEEDS '+f(t-e)+' HOURS'}</div></div></div>`}
 function home(){const A=S.artworks,av=avail(),c=cut(),tot=A.length*S.set.target||1,got=A.reduce((s,a)=>s+Math.min(T(a),expo(a,c)),0),atT=A.filter(a=>expo(a,c)>=T(a)).length,need=av.filter(a=>expo(a,c)<T(a)),def=av.reduce((s,a)=>s+deficit(a),0),nx=ups();
@@ -168,7 +187,7 @@ const hit=before.filter(([a,b])=>b<T(a)&&proj(a)>=T(a)).length;save();close();re
 function ioBox(m){open(`<h2>${m=='e'?'Export':'Import'} JSON</h2><textarea id="io" rows="12" style="margin:12px 0" ${m=='e'?'readonly':''}>${m=='e'?esc(JSON.stringify({events:S.events,sales:S.sales,set:S.set})):''}</textarea>${m=='e'?'<button class="p" data-a="cp">Copy</button>':'<input type="file" id="iof" accept=".json"><p><button class="a" data-a="doimp">Import</button></p><p class="lab">Paste JSON or choose a file. This replaces current data.</p>'}`)}
 /* events */
 document.addEventListener('click',async ev=>{const t=ev.target.closest('[data-a]');if(!t||t.tagName=='SELECT'||t.tagName=='INPUT'&&t.dataset.a!='pk')return;const a=t.dataset.a,id=t.dataset.id,A=id&&S.artworks.find(x=>x.id==id);
-if(a=='tab'){view=id;close();render();scrollTo(0,0)}else if(a=='more')open('<h2 style="margin-bottom:14px">More</h2>'+TABS.slice(4).map(t=>`<button class="${view==t[0]?'on':''}" data-a="tab" data-id="${t[0]}" style="display:block;width:100%;text-align:left;padding:14px 16px;margin-bottom:8px;border-radius:12px">${t[1]}</button>`).join(''));else if(a=='close')close();else if(a=='prof')prof(id);else if(a=='newart')artForm();else if(a=='editart')artForm(id);
+if(a=='tab'){if(id=='inv')return location.href='index.html';if(id=='man')return location.href='index.html#manage';view=id;history.replaceState(null,'','#'+id);close();render();scrollTo(0,0)}else if(a=='more')open('<h2 style="margin-bottom:14px">More</h2>'+TABS.slice(4).map(t=>`<button class="${view==t[0]?'on':''}" data-a="tab" data-id="${t[0]}" style="display:block;width:100%;text-align:left;padding:14px 16px;margin-bottom:8px;border-radius:12px">${t[1]}</button>`).join(''));else if(a=='close')close();else if(a=='prof')prof(id);else if(a=='newart')artForm();else if(a=='editart')artForm(id);
 else if(a=='saveart'){const g=i=>$('#f_'+i).value,o=id?A:{id:uid(),status:'available',createdAt:TODAY,artist:'Me',image:''};Object.assign(o,{title:g('t')||'Untitled',year:+g('y'),medium:g('m'),dimensions:g('d'),price:+g('p'),targetExposureHours:+g('g')||null});const fl=$('#f_i').files[0];if(fl)o.image=await img(fl);if(!o.image)o.image=gen(Math.random()*999|0);if(!id)S.artworks.push(o);save();close();render()}
 else if(a=='delart'){if(confirm('Delete this artwork?')){S.artworks=S.artworks.filter(x=>x.id!=id);S.sales=S.sales.filter(s=>s.artworkId!=id);S.events.forEach(e=>e.artworkIds=e.artworkIds.filter(x=>x!=id));save();close();render()}}
 else if(a=='sell')open(`<h2>Mark sold</h2><div class="f2" style="margin:14px 0"><div><label>Price €</label><input id="s_p" type="number" value="${A.price}"></div><div><label>Date</label><input id="s_d" type="date" value="${TODAY}"></div><div><label>City sold</label><input id="s_c" list="cl" placeholder="e.g. London"></div><div><label>Country (auto)</label><input id="s_k"></div></div><datalist id="cl">${Object.keys(CT).map(c=>`<option>${c}</option>`).join('')}</datalist><button class="a" data-a="dosell" data-id="${id}">Confirm sale</button>`);
@@ -185,5 +204,5 @@ else if(a=='clear'){if(confirm('Delete everything?')){S.events=[];S.sales=[];sav
 document.addEventListener('input',e=>{const a=e.target.dataset.a;if(a=='q'){q=e.target.value;render();const i=$('[data-a=q]');i.focus();i.setSelectionRange(q.length,q.length)}else if(e.target.closest('#ef,.fl'))updEv()});
 document.addEventListener('change',e=>{const a=e.target.dataset.a;if(a=='flt'){flt=e.target.value;render()}else if(a=='sort'){sort=e.target.value;render()}else if(a=='year'){S.year=+e.target.value;save();render()}else if(e.target.closest('#ef,.fl'))updEv()});
 document.getElementById('ov').addEventListener('mousedown',e=>{if(e.target.id=='ov')close()});
-(async()=>{S=await load();if(!S)S=demo();S.year=S.year||CY;render();if(S.isDemo)toast('Demo data — add works in SAIS and they appear here')})();
+(async()=>{S=await load();if(!S)S=demo();S.year=S.year||CY;const h=location.hash.slice(1);if(['home','cal','an','set'].includes(h))view=h;render();if(S.isDemo)toast('Demo data — add works in SAIS and they appear here')})();
 </script></body></html>

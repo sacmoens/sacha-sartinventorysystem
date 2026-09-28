@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>SAIS — Sacha's Art Inventory System</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#A97D40">
+<meta name="theme-color" content="#0d0c0a">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -116,8 +116,8 @@ header.site{
 .btn-solid:hover{background:var(--gold-deep);}
 .btn-plain{border-color:transparent;color:var(--ink-soft);}
 .btn-plain:hover{background:var(--paper-alt);color:var(--ink);}
-.btn-danger{border-color:#8a4a3d;color:#8a4a3d;}
-.btn-danger:hover{background:#8a4a3d;color:#fff;}
+.btn-danger{border-color:#d0786a;color:#d0786a;}
+.btn-danger:hover{background:#d0786a;color:#fff;}
 .btn:disabled{opacity:.45;cursor:default;pointer-events:none;}
 
 /* ---------- Gallery ---------- */
@@ -245,7 +245,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
 .pricerow{display:flex;gap:8px;}
 .pricerow select{max-width:78px;flex:0 0 auto;}
 .reqstar{color:var(--gold-deep);}
-.err-text{color:#8a4a3d;font-size:12px;margin-top:10px;}
+.err-text{color:#d0786a;font-size:12px;margin-top:10px;}
 
 .photogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:8px;}
 .pthumb{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:2px;overflow:hidden;}
@@ -343,8 +343,27 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001s !important;transition-duration:.001s !important;}
 }
+#appNav{position:fixed;left:0;right:0;bottom:0;z-index:90;justify-content:space-around;gap:2px;background:var(--paper);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));}#appNav button{flex:1;border:0;background:none;padding:12px 2px;font-size:12px;color:var(--ink-soft);border-radius:12px;font-family:inherit;}#appNav button.on{background:var(--gold);color:#fff;}@media print{#appNav{display:none!important;}}
+
+/* ---- dark glass theme ---- */
+:root{--paper:#0d0c0a;--paper-alt:#181612;--ink:#f2ecdf;--ink-soft:#9b927e;--gold:#c9a15a;--gold-deep:#e0bb75;--gold-pale:#3b311f;--line:rgba(255,255,255,.1);color-scheme:dark}
+body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}html{scroll-behavior:smooth}
+h1,h2,h3,.serif{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em}
+header.site{background:rgba(13,12,10,.72)!important;backdrop-filter:blur(18px) saturate(1.4)}
+.card{background:rgba(255,255,255,.04);border-radius:18px;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;backdrop-filter:blur(10px)}
+.card:hover{transform:translateY(-5px);box-shadow:0 24px 50px rgba(0,0,0,.55),0 0 0 1px rgba(201,161,90,.45)}
+.imgwrap{border-radius:18px 18px 0 0}
+.btn,.iconbtn,.menu-item{transition:all .25s}
+.btn-solid{background:linear-gradient(135deg,#e0bb75,#a97d40);color:#14110b;border-color:transparent}
+.btn-solid:hover{filter:brightness(1.12);background:linear-gradient(135deg,#e6c684,#b98a48);color:#14110b}
+.badge-available{color:#14110b}.iconbtn.active{color:#14110b}
+.swipe-screen{--paper:#f2ecdf;--ink:#050504;--gold-pale:#e8d5a8}
+#appNav{left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;max-width:560px;margin:0 auto!important;border-radius:22px!important;border:1px solid rgba(255,255,255,.1)!important;background:rgba(24,22,18,.7)!important;backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:0 14px 40px rgba(0,0,0,.6);padding:6px!important;}
+#appNav button{color:var(--ink-soft)}#appNav button.onbackground:linear-gradient(135deg,#e0bb75,#a97d40)!important;color:#14110b!important;box-shadow:0 0 18px rgba(201,161,90,.35)
+@media print{:root{--paper:#fff;--paper-alt:#f3efe5;--ink:#221D14;--ink-soft:#6B6252;--line:#E3D9C0;--gold:#A97D40;--gold-deep:#8A6530}body{background:#fff}}
 </style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -396,7 +415,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
       <input type="text" id="filterSearch" placeholder="Title or artist…">
     </div>
     <div class="admin-strip" id="adminStrip" style="display:none;">
-      <button class="btn btn-plain" id="manageBtn">Manage</button>
+      <button class="btn btn-plain" id="manageBtn" style="display:none">Manage</button>
       <button class="btn btn-solid" id="addArtworkBtn">+ Add artwork</button>
     </div>
   </div>
@@ -406,6 +425,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
   <div id="galleryRoot"></div>
 </main>
 
+<nav id="appNav" style="display:none"><button class="on" id="navInv">Inventory</button><button data-x="home">Dashboard</button><button data-x="cal">Events</button><button data-x="an">Insights</button><button id="navManage">Manage</button></nav>
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
 
@@ -676,6 +696,7 @@ function filteredArtworks(){
 
 function render(){
   $('#adminStrip').style.display = state.isAdmin ? 'flex' : 'none';
+  $('#appNav').style.display = state.isAdmin ? 'flex' : 'none'; document.body.style.paddingBottom = state.isAdmin ? '84px' : '';
   $('#lockIcon').innerHTML = state.isAdmin
     ? '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0"/>'
     : '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
@@ -772,7 +793,7 @@ function openSetPinModal(){
       <div class="panel-body">
         <p class="hint">Choose a 4-digit PIN to protect editing. Anyone with this PIN can add, edit, or delete artworks.</p>
         <div class="pindots"><input type="password" inputmode="numeric" maxlength="8" id="newPinInput" placeholder="••••"></div>
-        <p class="hint" id="pinErr" style="color:#8a4a3d;"></p>
+        <p class="hint" id="pinErr" style="color:#d0786a;"></p>
         <div class="checkline" style="margin-top:14px;">
           <input type="checkbox" id="rememberDeviceChk" checked>
           <label for="rememberDeviceChk">Remember this device — skip the PIN next time you open the app here</label>
@@ -801,7 +822,7 @@ function openEnterPinModal(pin){
       <div class="panel-head"><h2>Enter admin PIN</h2><button class="closex" data-close>${xIcon()}</button></div>
       <div class="panel-body">
         <div class="pindots"><input type="password" inputmode="numeric" maxlength="8" id="pinInput" placeholder="••••"></div>
-        <p class="hint" id="pinErr" style="color:#8a4a3d;"></p>
+        <p class="hint" id="pinErr" style="color:#d0786a;"></p>
         <div class="checkline" style="margin-top:14px;">
           <input type="checkbox" id="rememberDeviceChk" checked>
           <label for="rememberDeviceChk">Remember this device — skip the PIN next time you open the app here</label>
@@ -1429,7 +1450,7 @@ async function openManageMenu(){
           </button>
           <button class="menu-item" id="menuExposure">
             ${manageMenuIcon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}
-            <span class="menu-item-label">Exposure<div class="menu-item-sub">Plan events, hours, sales and reach</div></span>
+            <span class="menu-item-label">Exposure settings<div class="menu-item-sub">Target hours, intensity %, exposure data</div></span>
           </button>
           <button class="menu-item" id="menuBackup">
             ${manageMenuIcon('<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/>')}
@@ -1449,7 +1470,7 @@ async function openManageMenu(){
   wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
   wrap.querySelector('#menuCollections').onclick = ()=>{ closeOverlay(wrap); openExpoManager(); };
   wrap.querySelector('#menuArtists').onclick = ()=>{ closeOverlay(wrap); openArtistManager(); };
-  wrap.querySelector('#menuExposure').onclick = ()=>{ location.href='exposure.html'; };
+  wrap.querySelector('#menuExposure').onclick = ()=>{ location.href='exposure.html#set'; };
   wrap.querySelector('#menuBackup').onclick = ()=>{ closeOverlay(wrap); openBackupPanel(); };
   wrap.querySelector('#menuPublish').onclick = ()=>{ closeOverlay(wrap); openPublishPanel(); };
   wrap.querySelector('#menuForgetDevice').onclick = async ()=>{
@@ -2412,6 +2433,10 @@ $('#filterSearch').addEventListener('input', e=>{
 $('#swipeBtn').addEventListener('click', openSwipeView);
 $('#adminBtn').addEventListener('click', handleAdminClick);
 $('#manageBtn').addEventListener('click', openManageMenu);
+$('#navManage').addEventListener('click', openManageMenu);
+$('#navInv').addEventListener('click', ()=>scrollTo({top:0,behavior:'smooth'}));
+document.querySelectorAll('#appNav [data-x]').forEach(b=>b.addEventListener('click', ()=>{ location.href='exposure.html#'+b.dataset.x; }));
+if(location.hash==='#manage') setTimeout(()=>{ if(state.isAdmin) openManageMenu(); }, 900);
 $('#addArtworkBtn').addEventListener('click', ()=>openArtworkForm());
 $('#priceListBtn').addEventListener('click', openPriceList);
 
