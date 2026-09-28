@@ -1422,6 +1422,10 @@ async function openManageMenu(){
             ${manageMenuIcon('<circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>')}
             <span class="menu-item-label">Artists<div class="menu-item-sub">Profiles, submission link, agreement builder</div></span>
           </button>
+          <button class="menu-item" id="menuExposure">
+            ${manageMenuIcon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}
+            <span class="menu-item-label">Exposure<div class="menu-item-sub">Plan events, hours, sales and reach</div></span>
+          </button>
           <button class="menu-item" id="menuBackup">
             ${manageMenuIcon('<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/>')}
             <span class="menu-item-label">Backup<div class="menu-item-sub">Export or restore everything on this device</div></span>
@@ -1440,6 +1444,7 @@ async function openManageMenu(){
   wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
   wrap.querySelector('#menuCollections').onclick = ()=>{ closeOverlay(wrap); openExpoManager(); };
   wrap.querySelector('#menuArtists').onclick = ()=>{ closeOverlay(wrap); openArtistManager(); };
+  wrap.querySelector('#menuExposure').onclick = ()=>{ location.href='exposure.html'; };
   wrap.querySelector('#menuBackup').onclick = ()=>{ closeOverlay(wrap); openBackupPanel(); };
   wrap.querySelector('#menuPublish').onclick = ()=>{ closeOverlay(wrap); openPublishPanel(); };
   wrap.querySelector('#menuForgetDevice').onclick = async ()=>{
@@ -2069,7 +2074,7 @@ function openBackupPanel(){
   wrap.querySelector('#exportBackupBtn').onclick = async ()=>{
     const btn = wrap.querySelector('#exportBackupBtn');
     btn.disabled = true; btn.textContent = 'Preparing…';
-    const docKeys = await sList('sais:doc:');
+    const docKeys = [...await sList('sais:doc:'), ...await sList('sais:x:')];
     const docs = [];
     for(const key of docKeys){
       const value = await sGet(key);
