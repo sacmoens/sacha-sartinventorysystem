@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Artist Agreement Builder</title>
+<meta name="theme-color" content="#A97D40">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,500;0,9..144,600;1,9..144,440&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --paper:#FBFAF6; --paper-alt:#F3F0E8; --ink:#221D14; --ink-soft:#6B6152;
+  --gold:#A97D40; --gold-deep:#8A6530; --gold-pale:#D9C6A3; --line:#E4DDCB;
+  --danger:#9A4A3C;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.serif{font-family:'Fraunces',serif;}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px 80px;}
+
+header.top{padding:34px 0 22px;text-align:center;}
+.logo-mark{width:46px;height:46px;margin:0 auto 12px;}
+h1.title{font-family:'Fraunces',serif;font-weight:600;font-size:25px;margin:0 0 4px;}
+.subtitle{color:var(--ink-soft);font-size:13.5px;margin:0;max-width:420px;margin:0 auto;}
+
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin:0 0 6px;}
+section.block{margin:32px 0;}
+h2.blockhead{font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin:0 0 4px;}
+p.blockdesc{color:var(--ink-soft);font-size:13.5px;margin:0 0 16px;}
+.divider{border:0;border-top:1px solid var(--line);margin:32px 0;}
+
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.formgrid .span2{grid-column:1/-1;}
+.formfield label{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
+.formfield input,.formfield select,.formfield textarea{
+  width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;
+  background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;
+}
+.formfield input:focus,.formfield select:focus,.formfield textarea:focus{outline:none;border-color:var(--gold);}
+.formfield textarea{resize:vertical;min-height:70px;}
+@media (max-width:520px){ .formgrid{grid-template-columns:1fr;} }
+
+.split-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media (max-width:520px){ .split-row{grid-template-columns:1fr;} }
+.split-total{margin-top:10px;font-size:13px;padding:9px 12px;border-radius:8px;background:var(--paper-alt);border:1px solid var(--line);}
+.split-total.bad{color:var(--danger);background:#F7EBE8;border-color:#E3B9AF;}
+.split-total.good{color:var(--gold-deep);}
+
+.checkline{display:flex;align-items:flex-start;gap:10px;margin:14px 0;}
+.checkline input{width:19px;height:19px;flex:0 0 auto;margin-top:1px;accent-color:var(--gold);}
+.checkline label{font-size:13.5px;color:var(--ink);}
+
+.sig-wrap{border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden;margin-bottom:6px;}
+.sigpad{display:block;width:100%;height:130px;touch-action:none;}
+.sig-tools{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line);background:var(--paper-alt);}
+.sig-tools span{font-size:11.5px;color:var(--ink-soft);}
+.sig-tools button{background:none;border:none;color:var(--gold-deep);font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 6px;}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:24px;border:1px solid var(--line);background:transparent;color:var(--ink);font-family:'Inter',sans-serif;font-size:14.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent;}
+.btn-solid{background:var(--gold);border-color:var(--gold);color:#fff;width:100%;padding:15px;font-size:15.5px;}
+.btn-solid:active{background:var(--gold-deep);}
+.btn-plain{color:var(--gold-deep);border-color:var(--gold-pale);width:100%;}
+.btn-plain:active{background:var(--paper-alt);}
+.btn:disabled{opacity:.5;pointer-events:none;}
+
+.hint{color:var(--ink-soft);font-size:12.5px;}
+.errbox{background:#F7EBE8;border:1px solid #E3B9AF;color:var(--danger);border-radius:10px;padding:11px 14px;font-size:13px;margin:14px 0;display:none;}
+footer.foot{text-align:center;padding:30px 0 10px;color:var(--ink-soft);font-size:11.5px;}
+
+/* ---- printable document ---- */
+#docScreen{display:none;background:#fff;}
+.doc-toolbar{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;z-index:5;}
+.doc-toolbar .btn{width:auto;flex:1;padding:11px 16px;font-size:13.5px;}
+.doc{max-width:680px;margin:0 auto;padding:40px 34px 60px;color:#221D14;font-family:'Inter',sans-serif;font-size:13.5px;line-height:1.65;}
+.doc h1{font-family:'Fraunces',serif;font-size:22px;margin:0 0 4px;text-align:center;}
+.doc .doc-sub{text-align:center;color:#6B6152;font-size:12px;margin:0 0 28px;}
+.doc .parties{display:flex;justify-content:space-between;gap:20px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #E4DDCB;}
+.doc .party{flex:1;}
+.doc .party .eyebrow-doc{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#A97D40;font-weight:700;margin-bottom:4px;}
+.doc .party .name{font-weight:600;font-size:14.5px;}
+.doc h3{font-family:'Fraunces',serif;font-size:15px;margin:22px 0 6px;}
+.doc p{margin:0 0 10px;}
+.doc .split-table{width:100%;border-collapse:collapse;margin:8px 0 16px;}
+.doc .split-table td{padding:8px 10px;border:1px solid #E4DDCB;font-size:13px;}
+.doc .split-table td.pct{text-align:right;font-weight:600;width:70px;}
+.doc .sig-block{display:flex;gap:24px;margin-top:36px;}
+.doc .sig-col{flex:1;}
+.doc .sig-col .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6B6152;margin-bottom:6px;}
+.doc .sig-col img{max-height:60px;max-width:100%;display:block;margin-bottom:6px;}
+.doc .sig-col .sigline{border-top:1px solid #221D14;padding-top:5px;font-size:12.5px;}
+.doc .disclaimer{margin-top:30px;padding-top:16px;border-top:1px solid #E4DDCB;font-size:11px;font-style:italic;color:#6B6152;}
+
+@media print{
+  body *{visibility:hidden;}
+  #docScreen, #docScreen *{visibility:visible;}
+  #docScreen{display:block !important;position:absolute;top:0;left:0;width:100%;}
+  .no-print{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="formScreen">
+  <header class="top">
+    <div class="logo-mark">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="50,4 91,27 91,73 50,96 9,73 9,27" stroke="#A97D40" stroke-width="2.4"/>
+        <polygon points="50,20 78,36 78,64 50,80 22,64 22,36" stroke="#A97D40" stroke-width="1.3" opacity=".7"/>
+        <circle cx="50" cy="50" r="15" stroke="#A97D40" stroke-width="1.3" opacity=".85"/>
+        <path d="M50 37 L54 50 L50 63 L46 50 Z" fill="#A97D40" opacity=".9"/>
+        <path d="M37 50 L50 46 L63 50 L50 54 Z" fill="#A97D40" opacity=".5"/>
+      </svg>
+    </div>
+    <h1 class="title">Artist Agreement Builder</h1>
+    <p class="subtitle">A simple, fair contract for a collection or collaboration between an artist and a gallery — fill it in, sign it together, keep a copy each.</p>
+  </header>
+
+  <section class="block">
+    <p class="eyebrow">The parties</p>
+    <h2 class="blockhead">Who's involved</h2>
+    <div class="formgrid">
+      <div class="formfield span2"><label>Artist name *</label><input id="in_artistName" type="text"></div>
+      <div class="formfield span2"><label>Gallery / organisation name *</label><input id="in_galleryName" type="text"></div>
+      <div class="formfield"><label>Gallery contact / representative</label><input id="in_galleryRep" type="text"></div>
+      <div class="formfield"><label>Date</label><input id="in_agreementDate" type="date"></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="block">
+    <p class="eyebrow">The collaboration</p>
+    <h2 class="blockhead">What this covers</h2>
+    <div class="formgrid">
+      <div class="formfield span2"><label>Collection / project name</label><input id="in_project" type="text" placeholder="e.g. Summer Group Show 2026"></div>
+      <div class="formfield"><label>Start date</label><input id="in_startDate" type="date"></div>
+      <div class="formfield"><label>End date</label><input id="in_endDate" type="date"></div>
+      <div class="formfield span2"><label>Delivery details</label><textarea id="in_delivery" placeholder="How and when the work will be delivered"></textarea></div>
+      <div class="formfield"><label>Collect unsold work within (days)</label><input id="in_collectionDays" type="number" min="0" value="14"></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="block">
+    <p class="eyebrow">The split</p>
+    <h2 class="blockhead">How a sale is divided</h2>
+    <p class="blockdesc">Percentages of the sale price. The third field is optional — use it for a shared pool, a venue's cut, or anything else specific to your arrangement.</p>
+    <div class="split-row">
+      <div class="formfield"><label>Artist %</label><input id="in_artistPct" type="number" min="0" max="100" value="60"></div>
+      <div class="formfield"><label>Gallery %</label><input id="in_galleryPct" type="number" min="0" max="100" value="40"></div>
+      <div class="formfield"><label id="otherPctLabel">Other %</label><input id="in_otherPct" type="number" min="0" max="100" value="0"></div>
+    </div>
+    <div class="formfield" style="margin-top:10px;"><label>What does "Other" cover? (leave blank if not used)</label><input id="in_otherLabel" type="text" placeholder="e.g. shared artist pool, venue fee"></div>
+    <div class="split-total" id="splitTotal"></div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="block">
+    <p class="eyebrow">Other terms</p>
+    <h2 class="blockhead">The details</h2>
+    <div class="formgrid">
+      <div class="formfield span2"><label>Insurance & liability</label><textarea id="in_insurance" placeholder="Who insures the work while it's on display, and any limits on liability"></textarea></div>
+      <div class="formfield span2"><label>Payment terms</label><input id="in_payment" type="text" placeholder="e.g. paid within 14 days of a sale"></div>
+      <div class="formfield span2"><label>Anything else?</label><textarea id="in_otherTerms" placeholder="Any additional terms specific to this arrangement"></textarea></div>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="in_promoOk" checked>
+      <label for="in_promoOk">The gallery may photograph and share the work for promotional and archival purposes (website, social media, press).</label>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="block">
+    <p class="eyebrow">Sign</p>
+    <h2 class="blockhead">Both parties</h2>
+    <p class="blockdesc">Pass the phone back and forth, or send the finished document to sign separately — whatever's easier.</p>
+
+    <div class="formgrid" style="margin-bottom:10px;">
+      <div class="formfield span2"><label>Artist — type name to confirm *</label><input id="in_artistSignName" type="text"></div>
+    </div>
+    <div class="sig-wrap"><canvas class="sigpad" id="sigArtist"></canvas>
+      <div class="sig-tools"><span id="statusArtist">Draw with your finger (optional)</span><button type="button" data-clear="sigArtist" data-status="statusArtist">Clear</button></div>
+    </div>
+
+    <div class="formgrid" style="margin:18px 0 10px;">
+      <div class="formfield span2"><label>Gallery representative — type name to confirm *</label><input id="in_gallerySignName" type="text"></div>
+    </div>
+    <div class="sig-wrap"><canvas class="sigpad" id="sigGallery"></canvas>
+      <div class="sig-tools"><span id="statusGallery">Draw with your finger (optional)</span><button type="button" data-clear="sigGallery" data-status="statusGallery">Clear</button></div>
+    </div>
+  </section>
+
+  <div class="errbox" id="formErr"></div>
+  <button class="btn btn-solid" id="generateBtn">Generate agreement</button>
+</div>
+
+<div id="docScreen">
+  <div class="doc-toolbar no-print">
+    <button class="btn btn-plain" id="backToEditBtn">← Edit</button>
+    <button class="btn btn-solid" id="printBtn">Print / Save as PDF</button>
+  </div>
+  <div class="doc" id="docBody"></div>
+</div>
+
+<footer class="foot no-print" id="pageFooter">Part of the SAIS toolkit &middot; a general-purpose agreement template</footer>
+
+<script>
+(function(){
+'use strict';
+
+function setupSigPad(canvasId){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  let hasSig = false, drawing = false;
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#221D14'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  function pos(e){ const r = canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+  canvas.addEventListener('pointerdown', e=>{
+    drawing = true; hasSig = true;
+    const statusEl = document.getElementById(canvas.closest('.sig-wrap').querySelector('[data-status]').dataset.status);
+    if(statusEl) statusEl.textContent = 'Signed';
+    const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+  canvas.addEventListener('pointerup', ()=>drawing=false);
+  canvas.addEventListener('pointercancel', ()=>drawing=false);
+  return {
+    canvas, ctx,
+    clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); hasSig=false; },
+    hasSignature(){ return hasSig; },
+    dataUrl(){ return hasSig ? canvas.toDataURL('image/png') : ''; }
+  };
+}
+const padArtist = setupSigPad('sigArtist');
+const padGallery = setupSigPad('sigGallery');
+document.querySelectorAll('[data-clear]').forEach(btn=>{
+  btn.onclick = ()=>{
+    const pad = btn.dataset.clear === 'sigArtist' ? padArtist : padGallery;
+    pad.clear();
+    document.getElementById(btn.dataset.status).textContent = 'Draw with your finger (optional)';
+  };
+});
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(v){
+  if(!v) return '—';
+  try{ return new Date(v+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}); }
+  catch(e){ return v; }
+}
+
+function updateSplitTotal(){
+  const a = parseFloat(document.getElementById('in_artistPct').value)||0;
+  const g = parseFloat(document.getElementById('in_galleryPct').value)||0;
+  const o = parseFloat(document.getElementById('in_otherPct').value)||0;
+  const total = a+g+o;
+  const el = document.getElementById('splitTotal');
+  el.textContent = 'Total: ' + total + '%' + (total!==100 ? ' — should add up to 100%' : ' — adds up correctly');
+  el.className = 'split-total ' + (total===100 ? 'good' : 'bad');
+}
+['in_artistPct','in_galleryPct','in_otherPct'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateSplitTotal);
+});
+updateSplitTotal();
+
+const errBox = document.getElementById('formErr');
+function showErr(msg){ errBox.textContent = msg; errBox.style.display='block'; errBox.scrollIntoView({behavior:'smooth', block:'center'}); }
+function clearErr(){ errBox.style.display='none'; }
+
+document.getElementById('generateBtn').onclick = ()=>{
+  clearErr();
+  const artistName = document.getElementById('in_artistName').value.trim();
+  const galleryName = document.getElementById('in_galleryName').value.trim();
+  const artistSignName = document.getElementById('in_artistSignName').value.trim();
+  const gallerySignName = document.getElementById('in_gallerySignName').value.trim();
+  const a = parseFloat(document.getElementById('in_artistPct').value)||0;
+  const g = parseFloat(document.getElementById('in_galleryPct').value)||0;
+  const o = parseFloat(document.getElementById('in_otherPct').value)||0;
+
+  if(!artistName) return showErr('Please enter the artist name.');
+  if(!galleryName) return showErr('Please enter the gallery or organisation name.');
+  if(!artistSignName) return showErr('The artist needs to type their name to confirm.');
+  if(!gallerySignName) return showErr('The gallery representative needs to type their name to confirm.');
+  if(a+g+o !== 100) return showErr('The split percentages should add up to 100%.');
+
+  const galleryRep = document.getElementById('in_galleryRep').value.trim();
+  const project = document.getElementById('in_project').value.trim();
+  const startDate = document.getElementById('in_startDate').value;
+  const endDate = document.getElementById('in_endDate').value;
+  const delivery = document.getElementById('in_delivery').value.trim();
+  const collectionDays = document.getElementById('in_collectionDays').value || '14';
+  const otherLabel = document.getElementById('in_otherLabel').value.trim();
+  const insurance = document.getElementById('in_insurance').value.trim();
+  const payment = document.getElementById('in_payment').value.trim();
+  const otherTerms = document.getElementById('in_otherTerms').value.trim();
+  const promoOk = document.getElementById('in_promoOk').checked;
+  const agreementDate = document.getElementById('in_agreementDate').value;
+
+  let splitRows = `
+    <tr><td>Artist</td><td class="pct">${a}%</td></tr>
+    <tr><td>Gallery</td><td class="pct">${g}%</td></tr>`;
+  if(o > 0){
+    splitRows += `<tr><td>${esc(otherLabel || 'Other')}</td><td class="pct">${o}%</td></tr>`;
+  }
+
+  const doc = `
+    <h1>Artist &amp; Gallery Agreement</h1>
+    <p class="doc-sub">${agreementDate ? fmtDate(agreementDate) : new Date().toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</p>
+
+    <div class="parties">
+      <div class="party"><div class="eyebrow-doc">Artist</div><div class="name">${esc(artistName)}</div></div>
+      <div class="party"><div class="eyebrow-doc">Gallery / Organisation</div><div class="name">${esc(galleryName)}</div>${galleryRep?`<div>${esc(galleryRep)}</div>`:''}</div>
+    </div>
+
+    <p>This is a general agreement between <strong>${esc(artistName)}</strong> ("the Artist") and <strong>${esc(galleryName)}</strong> ("the Gallery")${project?` regarding <strong>${esc(project)}</strong>`:''}${(startDate||endDate)?`, running ${startDate?'from '+fmtDate(startDate):''}${endDate?' to '+fmtDate(endDate):''}`:''}.</p>
+
+    <h3>1. Delivery</h3>
+    <p>${delivery ? esc(delivery) : 'Delivery arrangements to be confirmed directly between both parties.'}</p>
+
+    <h3>2. Display and care</h3>
+    <p>The Gallery agrees to display the work with reasonable care in handling, storing, and presenting it for the duration of this agreement.</p>
+
+    <h3>3. Sales split</h3>
+    <p>Should a sale occur, proceeds are divided as follows:</p>
+    <table class="split-table">${splitRows}</table>
+    ${payment ? `<p>Payment terms: ${esc(payment.replace(/\.+$/,''))}.</p>` : ''}
+
+    <h3>4. Ownership</h3>
+    <p>The Artist retains full ownership and copyright of all work unless a sale is completed.</p>
+
+    <h3>5. Promotion</h3>
+    <p>${promoOk ? 'The Gallery may photograph and share the work for promotional and archival purposes (website, social media, press).' : 'The Gallery will not photograph or share the work for promotional purposes without further consent from the Artist.'}</p>
+
+    <h3>6. Insurance and liability</h3>
+    <p>${insurance ? esc(insurance) : 'To be agreed separately between both parties.'}</p>
+
+    <h3>7. Collection of unsold work</h3>
+    <p>Unsold work should be collected by the Artist within ${esc(collectionDays)} days of this agreement ending. The Gallery is not responsible for storage beyond that period.</p>
+
+    ${otherTerms ? `<h3>8. Other terms</h3><p>${esc(otherTerms)}</p>` : ''}
+
+    <div class="sig-block">
+      <div class="sig-col">
+        <div class="lbl">Artist</div>
+        ${padArtist.dataUrl() ? `<img src="${padArtist.dataUrl()}">` : ''}
+        <div class="sigline">${esc(artistSignName)} — ${new Date().toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+      <div class="sig-col">
+        <div class="lbl">Gallery representative</div>
+        ${padGallery.dataUrl() ? `<img src="${padGallery.dataUrl()}">` : ''}
+        <div class="sigline">${esc(gallerySignName)} — ${new Date().toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+    </div>
+
+    <p class="disclaimer">This is a general-purpose template, not legal advice. Both parties are encouraged to read it carefully and have it reviewed by a qualified professional before relying on it, particularly for higher-value or longer-term arrangements.</p>
+  `;
+
+  document.getElementById('docBody').innerHTML = doc;
+  document.getElementById('formScreen').style.display = 'none';
+  document.getElementById('pageFooter').style.display = 'none';
+  document.getElementById('docScreen').style.display = 'block';
+  window.scrollTo(0,0);
+};
+
+document.getElementById('backToEditBtn').onclick = ()=>{
+  document.getElementById('docScreen').style.display = 'none';
+  document.getElementById('formScreen').style.display = 'block';
+  document.getElementById('pageFooter').style.display = 'block';
+  window.scrollTo(0,0);
+};
+document.getElementById('printBtn').onclick = ()=>window.print();
+
+})();
+</script>
+</body>
+</html>
