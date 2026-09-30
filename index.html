@@ -334,11 +334,19 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
 
 @media print{
   body *{visibility:hidden;}
-  #priceSheet,#priceSheet *{visibility:visible;}
-  #priceSheet{position:absolute;top:0;left:0;width:100%;padding:0;}
+  #priceSheet,#priceSheet *,#catalogSheet,#catalogSheet *{visibility:visible;}
+  #priceSheet,#catalogSheet{position:absolute;top:0;left:0;width:100%;padding:0;}
   .no-print{display:none !important;}
   .overlay{position:absolute;background:none;padding:0;}
   .panel{box-shadow:none;border:none;}
+  @page{margin:14mm;}
+  .cat-page{page-break-after:always;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10mm 4mm;box-sizing:border-box;}
+  .cat-page:last-child{page-break-after:auto;}
+  .cat-page img{max-width:100%;max-height:62vh;object-fit:contain;margin-bottom:30px;}
+  .cat-title{font-family:'Fraunces',serif;font-size:22px;font-weight:700;margin-bottom:4px;}
+  .cat-meta{font-size:13px;color:#555;margin-bottom:14px;letter-spacing:.02em;}
+  .cat-price{font-size:16px;font-weight:700;letter-spacing:.03em;}
+  .cat-notes{font-size:12.5px;color:#555;max-width:420px;margin:10px auto 0;line-height:1.5;}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001s !important;transition-duration:.001s !important;}
@@ -347,7 +355,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
 
 /* ---- dark glass theme ---- */
 :root{--paper:#0d0c0a;--paper-alt:#181612;--ink:#f2ecdf;--ink-soft:#9b927e;--gold:#c9a15a;--gold-deep:#e0bb75;--gold-pale:#3b311f;--line:rgba(255,255,255,.1);color-scheme:dark}
-@media screen{body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}}html{scroll-behavior:smooth}@media print{body,.panel,#priceSheet{background:#fff!important}#priceSheet,#priceSheet *{color:#111!important}.thumb,.thumb-placeholder{filter:none!important}}
+@media screen{body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}}html{scroll-behavior:smooth}@media print{body,.panel,#priceSheet,#catalogSheet{background:#fff!important}#priceSheet,#priceSheet *,#catalogSheet,#catalogSheet *{color:#111!important}.thumb,.thumb-placeholder{filter:none!important}}
 h1,h2,h3,.serif{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em}
 header.site{background:rgba(13,12,10,.72)!important;backdrop-filter:blur(18px) saturate(1.4)}
 .card{background:rgba(255,255,255,.04);border-radius:18px;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;backdrop-filter:blur(10px)}
@@ -388,6 +396,9 @@ header.site{background:rgba(13,12,10,.72)!important;backdrop-filter:blur(18px) s
       </button>
       <button class="iconbtn no-print" id="priceListBtn" title="Price list">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h5"/></svg>
+      </button>
+      <button class="iconbtn no-print" id="catalogBtn" title="Client PDF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="14" rx="1.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 14.5 16 10l-8 8"/></svg>
       </button>
       <button class="iconbtn no-print" id="adminBtn" title="Admin">
         <svg id="lockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
@@ -2305,6 +2316,73 @@ function openPublishPanel(){
     }
   })();
 }
+function openClientCatalog(){
+  const wrap = openOverlay(`
+    <div class="panel panel-wide">
+      <div class="panel-head no-print"><h2>Client PDF</h2><button class="closex" data-close>${xIcon()}</button></div>
+      <div class="plist-controls no-print">
+        <div class="field-inline">
+          <label>Collection</label>
+          <select id="ccExpo">
+            <option value="all">All collections</option>
+            ${sortedExpos().map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-plain" id="ccAll" style="margin-left:auto;">Select all</button>
+        <button class="btn btn-plain" id="ccNone">Clear</button>
+        <span class="lab" id="ccCount" style="align-self:center;color:var(--ink-soft);font-size:13px;"></span>
+        <button class="btn btn-solid" id="ccPrintBtn">Print / Save as PDF</button>
+      </div>
+      <div id="ccPick" class="no-print" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin:14px 0;"></div>
+      <div id="catalogSheet"></div>
+    </div>`);
+  wrap.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeOverlay(wrap));
+  let picked = new Set(state.artworks.filter(a=>a.status==='available').map(a=>a.id));
+
+  function eligible(){
+    const expoSel = wrap.querySelector('#ccExpo').value;
+    return state.artworks.filter(a=>a.status==='available' && (expoSel==='all' || a.expoId===expoSel));
+  }
+  function drawPicker(){
+    const list = eligible();
+    wrap.querySelector('#ccPick').innerHTML = list.map(a=>{
+      const cover = a.photos && a.photos[0];
+      return `<label style="cursor:pointer;display:block;">
+        <div style="position:relative;border-radius:8px;overflow:hidden;border:2px solid ${picked.has(a.id)?'var(--gold)':'var(--line)'};">
+          ${cover?`<img src="${cover}" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;">`:`<div style="width:100%;aspect-ratio:3/4;background:var(--paper-alt);"></div>`}
+          <input type="checkbox" data-id="${a.id}" ${picked.has(a.id)?'checked':''} style="position:absolute;top:6px;left:6px;width:18px;height:18px;">
+        </div>
+        <div style="font-size:11.5px;margin-top:4px;line-height:1.3;">${esc(a.title)||'Untitled'}</div>
+      </label>`;
+    }).join('') || '<p class="lab">No available works in this collection.</p>';
+    wrap.querySelectorAll('#ccPick input').forEach(cb=>cb.addEventListener('change',()=>{
+      if(cb.checked) picked.add(cb.dataset.id); else picked.delete(cb.dataset.id);
+      drawSheet();
+    }));
+    drawSheet();
+  }
+  function drawSheet(){
+    const list = eligible().filter(a=>picked.has(a.id));
+    wrap.querySelector('#ccCount').textContent = list.length+' work'+(list.length===1?'':'s')+' selected';
+    wrap.querySelector('#catalogSheet').innerHTML = list.map(a=>{
+      const cover = a.photos && a.photos[0];
+      const meta = [a.material,a.measurements,a.year].filter(Boolean).map(esc).join(' · ');
+      const price = a.status==='sold' ? 'Sold' : (a.status==='nfs' ? 'Not for sale' : esc(money(a.price,a.currency)));
+      return `<div class="cat-page">
+        ${cover?`<img src="${cover}" alt="">`:''}
+        <div class="cat-title">${esc(a.title)||'Untitled'}</div>
+        <div class="cat-meta">${esc(a.artist)||''}${meta?' — '+meta:''}</div>
+        <div class="cat-price">${price}</div>
+        ${a.notes?`<div class="cat-notes">${esc(a.notes)}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  wrap.querySelector('#ccExpo').addEventListener('change', ()=>{ picked = new Set(eligible().map(a=>a.id)); drawPicker(); });
+  wrap.querySelector('#ccAll').addEventListener('click', ()=>{ eligible().forEach(a=>picked.add(a.id)); drawPicker(); });
+  wrap.querySelector('#ccNone').addEventListener('click', ()=>{ picked.clear(); drawPicker(); });
+  wrap.querySelector('#ccPrintBtn').addEventListener('click', ()=>window.print());
+  drawPicker();
+}
 function openPriceList(){
   const wrap = openOverlay(`
     <div class="panel panel-wide">
@@ -2439,6 +2517,7 @@ document.querySelectorAll('#appNav [data-x]').forEach(b=>b.addEventListener('cli
 if(location.hash==='#manage') setTimeout(()=>{ if(state.isAdmin) openManageMenu(); }, 900);
 $('#addArtworkBtn').addEventListener('click', ()=>openArtworkForm());
 $('#priceListBtn').addEventListener('click', openPriceList);
+$('#catalogBtn').addEventListener('click', openClientCatalog);
 
 window.SAIS = {openDetail, openArtworkForm, confirmDeleteArtwork};
 

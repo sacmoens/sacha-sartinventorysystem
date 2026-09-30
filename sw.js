@@ -1,7 +1,7 @@
 // Caches the app shell so it opens instantly and works with no signal at all.
 // Your gallery data itself lives in IndexedDB (see index.html), not here — this
 // only caches the code/icons needed to run the app.
-const CACHE_NAME = 'sais-shell-v15';
+const CACHE_NAME = 'sais-shell-v16';
 const SHELL_FILES = [
   './',
   './index.html',
