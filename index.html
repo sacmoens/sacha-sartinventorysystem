@@ -347,7 +347,7 @@ main{max-width:1200px;margin:0 auto;padding:6px 20px 80px;}
 
 /* ---- dark glass theme ---- */
 :root{--paper:#0d0c0a;--paper-alt:#181612;--ink:#f2ecdf;--ink-soft:#9b927e;--gold:#c9a15a;--gold-deep:#e0bb75;--gold-pale:#3b311f;--line:rgba(255,255,255,.1);color-scheme:dark}
-body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}html{scroll-behavior:smooth}
+@media screen{body{background:radial-gradient(1100px 600px at 85% -10%,rgba(201,161,90,.16),transparent 60%),radial-gradient(900px 500px at -10% 105%,rgba(110,90,200,.09),transparent 60%),#0d0c0a;background-attachment:fixed}}html{scroll-behavior:smooth}@media print{body,.panel,#priceSheet{background:#fff!important}#priceSheet,#priceSheet *{color:#111!important}.thumb,.thumb-placeholder{filter:none!important}}
 h1,h2,h3,.serif{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em}
 header.site{background:rgba(13,12,10,.72)!important;backdrop-filter:blur(18px) saturate(1.4)}
 .card{background:rgba(255,255,255,.04);border-radius:18px;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;backdrop-filter:blur(10px)}
